@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Content Distributor — AI-Powered Multi-Platform Publishing</title>
+  <meta name="description" content="AI-powered content distribution dashboard for Facebook, WordPress, and Google Drive">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Tab styles */
+    .tab-btn {
+      display: flex; align-items: center; gap: .45rem;
+      padding: .55rem 1.1rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      font-size: .85rem; font-weight: 600;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+      margin-bottom: -1px;
+    }
+    .tab-btn:hover { color: var(--text-bright); }
+    .tab-btn--active { color: var(--accent); border-bottom-color: var(--accent); }
+    /* Per-page checkbox row */
+    .page-checkbox-row {
+      display: flex; align-items: center; gap: .55rem;
+      padding: .35rem .55rem;
+      border-radius: 8px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border-dim);
+      font-size: .85rem; color: var(--text-bright);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .page-checkbox-row:hover { background: rgba(255,255,255,.06); }
+    .page-checkbox-row input[type=checkbox] { width:15px; height:15px; accent-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header__brand">
+      <div class="header__logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#a855f7"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
+          <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1 class="header__title">Aeslatek Hub</h1>
+    </div>
+
+    <!-- GLOBAL NAV -->
+    <nav style="display:flex; gap: 24px; font-weight: 600; font-size: 14px; position:absolute; left:50%; transform:translateX(-50%);">
+      <a href="/" style="color: var(--text-primary); text-decoration: none; border-bottom: 2px solid var(--accent); padding-bottom:4px;">Content Distributor</a>
+      <a href="/content-hub" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Content Creator</a>
+      <a href="/ads-dashboard" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Ads Dashboard</a>
+      <a href="/computer-info" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Computer Info</a>
+    </nav>
+
+    <div class="header__actions">
+      <span id="statusBadge" class="badge badge--info">Dry Run</span>
+      <a href="/settings" class="btn btn--ghost" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="/logs" target="_blank" class="btn btn--ghost" title="Live Logs">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Logs
+      </a>
+      <button id="guidelinesBtn" class="btn btn--ghost" title="Brand Guidelines">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Guidelines
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="main">
+    <!-- Left Column: Tabbed Content Editor -->
+    <section class="panel editor-panel">
+
+      <!-- Tab Bar -->
+      <div style="display:flex;gap:0;border-bottom:1px solid var(--border-dim);margin-bottom:1.25rem">
+        <button id="tabFb" class="tab-btn tab-btn--active" onclick="switchTab('fb')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          Facebook Post
+        </button>
+        <button id="tabWp" class="tab-btn" onclick="switchTab('wp')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zM3.443 12c0-1.247.28-2.43.771-3.495l4.241 11.622A8.57 8.57 0 0 1 3.443 12zm8.557 8.557c-.882 0-1.73-.148-2.527-.413l2.684-7.8 2.749 7.531c.018.044.04.085.063.124a8.522 8.522 0 0 1-2.969.558zm1.22-12.567c.539-.028 1.024-.084 1.024-.084.482-.057.425-.764-.057-.736 0 0-1.45.114-2.384.114-.878 0-2.356-.114-2.356-.114-.483-.028-.539.708-.057.736 0 0 .457.056.94.084l1.394 3.822-1.96 5.878L7.44 7.99c.539-.028 1.024-.084 1.024-.084.482-.057.425-.764-.057-.736 0 0-1.45.114-2.384.114-.168 0-.366-.004-.573-.013A8.528 8.528 0 0 1 12 3.443c2.184 0 4.174.82 5.684 2.167-.036-.002-.072-.008-.11-.008-1.33 0-2.274 1.158-2.274 2.402 0 .766.443 1.415.913 2.18.355.613.768 1.397.768 2.53 0 .784-.301 1.694-.698 2.963l-.914 3.054-3.149-9.741zM17.4 19.193l2.715-7.842c.507-1.27.677-2.286.677-3.192 0-.328-.021-.632-.06-.914A8.542 8.542 0 0 1 20.558 12a8.545 8.545 0 0 1-3.158 7.193z"/></svg>
+          WordPress Draft
+        </button>
+      </div>
+
+      <!-- =========== FACEBOOK TAB =========== -->
+      <div id="tabContentFb">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+          <span style="font-size:.8rem;color:var(--text-dim)">Facebook Post</span>
+          <span id="charCount" class="badge badge--neutral">0 chars</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group form-group--half">
+            <label class="form-label" for="postPillar">Pillar</label>
+            <input type="text" id="postPillar" class="form-input" placeholder="e.g., Branding, Education...">
+          </div>
+          <div class="form-group form-group--half">
+            <label class="form-label" for="postAngle">Angle</label>
+            <input type="text" id="postAngle" class="form-input" placeholder="e.g., Promotion, Awareness...">
+          </div>
+          <div class="form-group form-group--half">
+            <label class="form-label" for="postPic">PIC (In Charge)</label>
+            <input type="text" id="postPic" class="form-input" placeholder="e.g., Minh, Lan...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="postContent">Content</label>
+          <textarea id="postContent" class="form-textarea" rows="7" placeholder="Write your Facebook post content here..."></textarea>
+        </div>
+
+        <!-- Media Upload -->
+        <div class="form-group">
+          <label class="form-label">Media <span class="text-dim">(multiple images/videos)</span></label>
+          <div id="dropZone" class="drop-zone">
+            <div class="drop-zone__content">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <p>Drag &amp; drop images/videos here</p>
+              <span class="text-dim">or click to browse (select multiple)</span>
+            </div>
+            <input type="file" id="mediaInput" accept="image/*,video/*" multiple hidden>
+          </div>
+          <div id="mediaList" class="media-list"></div>
+          <button id="clearAllMedia" class="btn btn--sm btn--danger" hidden>Clear All Media</button>
+        </div>
+
+        <!-- Per-page Facebook Checkboxes -->
+        <div class="form-group">
+          <label class="form-label">Post to Pages</label>
+          <div id="fbPageCheckboxes" style="display:flex;flex-direction:column;gap:.4rem">
+            <span style="font-size:.8rem;color:var(--text-dim)">Loading pages...</span>
+          </div>
+        </div>
+
+        <!-- Google Drive toggle -->
+        <div class="form-group" style="margin-bottom:.5rem">
+          <label class="page-checkbox-row" style="width:fit-content">
+            <input type="checkbox" id="platDrive" checked>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 5.95L11.14 9.45zM14.84 3.5H7.69L14.28 15h7.15zM8.6 16l-3.43 5.95h14.86L23.46 16z"/></svg>
+            Save to Google Drive
+          </label>
+        </div>
+
+        <!-- Schedule -->
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.85rem;color:var(--text-dim)">
+            <input type="checkbox" id="scheduleToggle" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)">
+            <span>📅 Schedule Post</span>
+          </label>
+          <div id="scheduleTimeRow" style="display:none;margin-top:.6rem">
+            <input type="datetime-local" id="scheduleTime" class="form-input" style="width:100%">
+            <div style="font-size:.75rem;color:var(--text-dim);margin-top:.3rem">⚠️ At least 10 min in the future, max 30 days ahead.</div>
+          </div>
+        </div>
+
+        <!-- Facebook Action Buttons -->
+        <div class="action-bar">
+          <button id="reviewBtn" class="btn btn--secondary btn--lg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            AI Review
+          </button>
+          <button id="distributeBtn" class="btn btn--primary btn--lg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Distribute
+          </button>
+        </div>
+      </div>
+
+      <!-- =========== WORDPRESS TAB =========== -->
+      <div id="tabContentWp" style="display:none">
+        <div class="form-group">
+          <label class="form-label" for="wpTitle">Post Title</label>
+          <input type="text" id="wpTitle" class="form-input" placeholder="Title for WordPress post...">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group form-group--half">
+            <label class="form-label" for="wpPillar">Pillar</label>
+            <input type="text" id="wpPillar" class="form-input" placeholder="e.g., Branding...">
+          </div>
+          <div class="form-group form-group--half">
+            <label class="form-label" for="wpAngle">Angle</label>
+            <input type="text" id="wpAngle" class="form-input" placeholder="e.g., Promotion...">
+          </div>
+          <div class="form-group form-group--half">
+            <label class="form-label" for="wpPic">PIC (In Charge)</label>
+            <input type="text" id="wpPic" class="form-input" placeholder="e.g., Minh, Lan...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="wpContent">WP Content
+            <span class="text-dim" style="font-weight:400"> — dùng <code style="background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px;font-size:.8rem">[image:1]</code> <code style="background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px;font-size:.8rem">[image:2]</code> để chèn ảnh đúng vị trí</span>
+          </label>
+          <textarea id="wpContent" class="form-textarea" rows="7" placeholder="Viết nội dung WordPress ở đây...&#10;&#10;Ví dụ:&#10;Đây là đoạn giới thiệu.&#10;&#10;[image:1]&#10;&#10;Đây là đoạn sau ảnh thứ nhất.&#10;&#10;[image:2]&#10;&#10;Kết luận..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="wpMediaInput">Images <span class="text-dim">(multiple — first = featured)</span></label>
+          <input type="file" id="wpMediaInput" accept="image/*" multiple style="font-size:.85rem;color:var(--text-dim);cursor:pointer;width:100%">
+        </div>
+
+        <!-- Google Drive toggle (WP) -->
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label class="page-checkbox-row" style="width:fit-content">
+            <input type="checkbox" id="platDriveWp">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 5.95L11.14 9.45zM14.84 3.5H7.69L14.28 15h7.15zM8.6 16l-3.43 5.95h14.86L23.46 16z"/></svg>
+            Also save to Google Drive
+          </label>
+        </div>
+
+        <!-- WordPress Action Buttons -->
+        <div class="action-bar">
+          <button id="wpReviewBtn" class="btn btn--secondary btn--lg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            AI Review
+          </button>
+          <button id="saveDraftBtn" class="btn btn--primary btn--lg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Draft
+          </button>
+        </div>
+        <div id="wpReviewResult" style="display:none;margin-top:.75rem"></div>
+        <div id="wpDraftResult" style="display:none;margin-top:.5rem;font-size:.82rem;padding:.5rem .75rem;border-radius:8px"></div>
+      </div>
+
+    </section>
+
+    <!-- Right Column: AI Review + Results -->
+    <section class="panel review-panel">
+      <!-- AI Review Section -->
+      <div id="reviewSection" class="review-section">
+        <div class="panel__header">
+          <h2 class="panel__title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/></svg>
+            AI Brand Review
+          </h2>
+        </div>
+        <div id="reviewContent" class="review-content">
+          <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <p>Click <strong>AI Review</strong> to check your content against brand guidelines</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribution Results Section -->
+      <div id="resultsSection" class="results-section" hidden style="margin-top:1.25rem">
+        <div class="panel__header">
+          <h2 class="panel__title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Distribution Results
+          </h2>
+        </div>
+        <div id="resultsContent" class="results-content"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Guidelines Modal -->
+  <div id="guidelinesModal" class="modal" hidden>
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h2>Brand Guidelines</h2>
+        <button id="closeModal" class="btn btn--ghost btn--sm">✕</button>
+      </div>
+      <div class="modal__body">
+        <textarea id="guidelinesEditor" class="form-textarea" rows="20"></textarea>
+      </div>
+      <div class="modal__footer">
+        <button id="saveGuidelines" class="btn btn--primary">Save Guidelines</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" hidden>
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p id="loadingText">Processing...</p>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

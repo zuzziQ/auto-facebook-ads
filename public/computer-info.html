@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aeslatek Device Audit - Aeslatek Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .table-container { background: rgba(255,255,255,.02); border: 1px solid var(--border-dim); border-radius: 8px; overflow-x: auto; margin-top: 2rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 1rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border-dim); }
+    th { background: rgba(255,255,255,.05); font-weight: 600; color: var(--text-dim); white-space: nowrap; }
+    tr:hover { background: rgba(255,255,255,.04); }
+    .status-ok { color: #4ade80; font-weight: 500; }
+    .status-warn { color: #facc15; font-weight: 500; }
+    .status-err { color: #f87171; font-weight: 600; }
+    .how-to { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; line-height: 1.6; }
+    .code-box { background: #1e1e2e; padding: 1rem; border-radius: 6px; font-family: monospace; color: #a6accd; margin-top: 0.5rem; white-space: pre-wrap; overflow-x: auto; }
+    .badge-tier { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .tier-HIGH-END { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.5); }
+    .tier-MID-RANGE { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.5); }
+    .tier-LOW-END { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.5); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: rgba(255,255,255,.02); border: 1px solid var(--border-dim); border-radius: 8px; padding: 1.5rem; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+    .stat-card h3 { font-size: 0.85rem; color: var(--text-dim); margin: 0 0 0.5rem 0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-val { font-size: 2.25rem; font-weight: 700; color: #f8fafc; line-height: 1; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header__brand">
+      <div class="header__logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <defs><linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs>
+          <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
+          <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1 class="header__title">Aeslatek Hub</h1>
+    </div>
+
+    <!-- GLOBAL NAV -->
+    <nav style="display:flex; gap: 24px; font-weight: 600; font-size: 14px; position:absolute; left:50%; transform:translateX(-50%);">
+      <a href="/" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Content Distributor</a>
+      <a href="/content-hub" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Content Creator</a>
+      <a href="/ads-dashboard" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Ads Dashboard</a>
+      <a href="/computer-info" style="color: var(--text-primary); text-decoration: none; border-bottom: 2px solid var(--accent); padding-bottom:4px;">Computer Info</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="stats-grid">
+      <div class="stat-card"><h3>Tổng Số Máy</h3><div class="stat-val" id="statTotal">0</div></div>
+      <div class="stat-card"><h3>Windows Crack (Cần Mua)</h3><div class="stat-val status-err" id="statCrackWin">0</div></div>
+      <div class="stat-card"><h3>Office Crack (Cần Mua)</h3><div class="stat-val status-warn" id="statCrackOff">0</div></div>
+      <div class="stat-card"><h3>Đủ đk lên Win 11</h3><div class="stat-val status-ok" id="statWin11">0</div></div>
+      <div class="stat-card"><h3>Chỉ nên dùng Win 10</h3><div class="stat-val" style="color: #94a3b8;" id="statWin10">0</div></div>
+    </div>
+
+    <div class="how-to">
+      <h2>Hướng dẫn kết nối máy con (Aeslatek Audit)</h2>
+      <p style="color: var(--text-dim); margin-bottom: 1rem;"><em>Lưu ý: Vì lý do bảo mật, trình duyệt Web không được phép tự động mở PowerShell trên máy tính. Hãy làm theo 3 bước siêu tốc sau:</em></p>
+      
+      <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
+        <strong style="color: #facc15; font-size: 1.1rem; display: block; margin-bottom: 0.5rem;">BƯỚC 1: NHẬP TÊN NGƯỜI DÙNG / PHÒNG BAN</strong>
+        <p style="color: var(--text-dim); margin-bottom: 1rem; font-size: 0.9rem;">(Bắt buộc) Nhập tên của bạn để bộ phận IT nhận diện được máy trên hệ thống.</p>
+        <input type="text" id="pcNameInput" placeholder="Ví dụ: Kế Toán - Chị Hằng" style="padding: 0.75rem; width: 300px; border-radius: 6px; border: 1px solid var(--border-dim); background: #1e1e2e; color: white; font-size: 1rem; text-align: center;" oninput="updateCommand()">
+      </div>
+
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 6px;">
+          <strong style="color: #60a5fa;">Bước 2:</strong> Bấm nút Copy lệnh dưới đây.
+          <div style="position: relative; margin-top: 0.5rem;">
+            <div class="code-box" id="auditCommand">[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm https://scabby-blurb-unscathed.ngrok-free.dev/audit.ps1 -Headers @{"ngrok-skip-browser-warning"="1"} | iex</div>
+            <button onclick="copyCommand()" style="position: absolute; right: 8px; top: 8px; background: #6366f1; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: 600;">COPY</button>
+          </div>
+        </div>
+        
+        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 6px;">
+          <strong style="color: #60a5fa;">Bước 3:</strong> Mở PowerShell và Dán
+          <ol style="margin-left: 1.2rem; margin-top: 0.5rem; line-height: 1.6;">
+            <li>Bấm phím <strong>Windows + R</strong> trên bàn phím.</li>
+            <li>Gõ chữ <code>powershell</code> và ấn <strong>Enter</strong>.</li>
+            <li>Click <strong>chuột phải</strong> vào màn hình xanh để dán lệnh, rồi ấn <strong>Enter</strong>!</li>
+          </ol>
+        </div>
+      </div>
+      
+      <p style="font-size: 0.85rem; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">Dành cho IT: Cấu hình GPO Logon Script, Startup Script bằng câu lệnh trên để chạy tự động toàn công ty.</p>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <h2>Danh sách Máy tính Nội Bộ (Aeslatek DB)</h2>
+      <div style="font-size: 0.85rem; color: var(--text-dim);">
+        <strong>Cột Google Sheet Mới (A-T):</strong> Timestamp | Hostname | Mainboard | OS Version | CPU | RAM | Storage | IP | MAC | License Key | OS Status | Office Version | Office Crack | Crack Detected | Crack Reason | TPM | Score | Tier | Win Plan | M365 Plan
+      </div>
+    </div>
+    
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Hostname / Mainboard</th>
+            <th>Tier / Score</th>
+            <th>Hardware (CPU/RAM/Disk)</th>
+            <th style="max-width: 150px;">OS & License</th>
+            <th style="max-width: 150px; width: 150px;">Microsoft Office</th>
+            <th>Crack Status</th>
+            <th>Recommended Plans</th>
+            <th>Network Info</th>
+            <th>Last Updated</th>
+          </tr>
+        </thead>
+        <tbody id="computerTableBody">
+          <tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    async function fetchComputers() {
+      try {
+        const res = await fetch('/api/audit/computers');
+        const data = await res.json();
+        const tbody = document.getElementById('computerTableBody');
+        
+        if (!data.success || data.computers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-dim);">Chưa có dữ liệu. Vui lòng chạy lệnh Audit trên máy con.</td></tr>';
+          return;
+        }
+
+        let total = 0, crackWin = 0, crackOff = 0, win11 = 0, win10 = 0;
+
+        tbody.innerHTML = data.computers.map(c => {
+          total++;
+          if (c.crackDetected === 'YES' || c.crackDetected === 'CRACKED') crackWin++;
+          
+          const isOfficeCracked = c.officeCrack && c.officeCrack !== 'Clean' && c.officeCrack !== 'N/A' && c.officeCrack !== '';
+          const isOfficeMissing = !c.officeVersion || c.officeVersion === 'Not Installed';
+          if (isOfficeCracked || isOfficeMissing) crackOff++;
+          
+          if (c.windowsPlan && c.windowsPlan.includes('11')) win11++;
+          else if (c.windowsPlan && c.windowsPlan.includes('10')) win10++;
+
+          let crackHtml = '';
+          if (c.crackDetected === 'YES') {
+            crackHtml = `<div class="status-err">⚠️ DETECTED</div><div style="font-size:0.75rem; color: #fca5a5; max-width: 150px;">${c.crackReason}</div>`;
+          } else {
+            crackHtml = `<div class="status-ok">✔️ CLEAN</div>`;
+          }
+
+          let tierClass = c.tier ? `tier-${c.tier.replace(/ /g, '-')}` : '';
+
+          return `
+            <tr>
+              <td style="font-weight: 600; color: #e2e8f0; vertical-align: top;">
+                ${c.hostname}<br/>
+                <span style="font-size: 0.75rem; font-weight: 400; color: #94a3b8;">${c.mainboard || 'Unknown Board'}</span><br/>
+                <span style="font-size: 0.75rem; font-weight: 400; color: #94a3b8;">TPM: ${c.tpmEnabled || 'Unknown'}</span>
+              </td>
+              <td style="vertical-align: top;">
+                <div class="badge-tier ${tierClass}">${c.tier || 'N/A'}</div>
+                <div style="font-size: 0.75rem; margin-top: 4px; color: var(--text-dim);">Score: ${c.score || 0} pts</div>
+              </td>
+              <td style="font-size: 0.8rem; vertical-align: top;">
+                <div style="margin-bottom: 4px;"><strong>CPU:</strong> ${c.cpu}</div>
+                <div style="margin-bottom: 4px;"><strong>RAM:</strong> ${c.ram}</div>
+                <div style="color: #cbd5e1;"><strong>Storage:</strong> ${c.storageConfig || c.disk}</div>
+              </td>
+              <td style="vertical-align: top;">
+                <div style="font-size: 0.8rem; margin-bottom: 4px;">${c.osVersion}</div>
+                <div style="font-size: 0.8rem; font-family: monospace; color: #94a3b8;">${c.licenseKey}</div>
+                <div style="font-size: 0.75rem; margin-top: 2px;" class="${c.licenseStatus === 'Retail' || c.licenseStatus === 'OEM' ? 'status-ok' : (c.licenseStatus === 'KMS' ? 'status-err' : 'status-warn')}">${c.licenseStatus || 'Unknown'}</div>
+              </td>
+              <td style="vertical-align: top; max-width: 150px; word-wrap: break-word; white-space: normal;">
+                <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight: 500; color: #f8fafc; word-break: break-all;">${(c.officeVersion || 'Not Installed').replace(/,/g, ', ')}</div>
+                <div style="font-size: 0.75rem;" class="${c.officeCrack === 'Clean' || c.officeCrack === '' ? 'status-ok' : 'status-err'}">${c.officeCrack || 'N/A'}</div>
+              </td>
+              <td style="vertical-align: top;">${crackHtml}</td>
+              <td style="font-size: 0.8rem; vertical-align: top;">
+                <div style="margin-bottom: 4px; color: #7dd3fc;">🪟 ${c.windowsPlan || 'N/A'}</div>
+                <div style="color: #c084fc;">☁️ ${c.m365Plan || 'N/A'}</div>
+              </td>
+              <td style="vertical-align: top; font-size: 0.8rem;">
+                <div style="font-family: monospace; margin-bottom: 4px;">IP: ${c.ipAddress}</div>
+                <div style="font-family: monospace; color: #94a3b8;">MAC: ${c.macAddress}</div>
+              </td>
+              <td style="font-size: 0.8rem; color: var(--text-dim); vertical-align: top;">${c.lastSeen}</td>
+            </tr>
+          `;
+        }).join('');
+
+        document.getElementById('statTotal').innerText = total;
+        document.getElementById('statCrackWin').innerText = crackWin;
+        document.getElementById('statCrackOff').innerText = crackOff;
+        document.getElementById('statWin11').innerText = win11;
+        document.getElementById('statWin10').innerText = win10;
+        
+      } catch (err) {
+        console.error('Fetch error:', err);
+      }
+    }
+
+    function copyCommand() {
+      const nameInput = document.getElementById('pcNameInput').value.trim();
+      if (!nameInput) {
+        alert("Vui lòng điền Tên Máy / Người dùng ở Bước 1 trước khi Copy lệnh!");
+        document.getElementById('pcNameInput').focus();
+        return;
+      }
+      
+      const cmd = document.getElementById('auditCommand').innerText;
+      navigator.clipboard.writeText(cmd).then(() => {
+        const btn = document.querySelector('button[onclick="copyCommand()"]');
+        btn.innerText = 'ĐÃ COPY ✔';
+        btn.style.background = '#10b981';
+        setTimeout(() => {
+          btn.innerText = 'COPY';
+          btn.style.background = '#6366f1';
+        }, 3000);
+      });
+    }
+
+    function updateCommand() {
+      const name = document.getElementById('pcNameInput').value.trim();
+      const cmdEl = document.getElementById('auditCommand');
+      const tlsFix = "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; ";
+      if (name) {
+        const safeName = name.replace(/'/g, "''"); // Escape single quotes
+        cmdEl.innerText = `${tlsFix}$UserPC='${safeName}'; irm https://scabby-blurb-unscathed.ngrok-free.dev/audit.ps1 -Headers @{"ngrok-skip-browser-warning"="1"} | iex`;
+      } else {
+        cmdEl.innerText = `${tlsFix}irm https://scabby-blurb-unscathed.ngrok-free.dev/audit.ps1 -Headers @{"ngrok-skip-browser-warning"="1"} | iex`;
+      }
+    }
+
+    fetchComputers();
+  </script>
+</body>
+</html>

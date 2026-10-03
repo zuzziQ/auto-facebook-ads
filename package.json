@@ -1,0 +1,37 @@
+{
+  "name": "content-distributor",
+  "version": "1.0.0",
+  "description": "AI-powered content distribution workflow with brand review - auto-posts to Facebook, WordPress, and Google Drive",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "npx nodemon src/server.js",
+    "cli": "node src/index.js"
+  },
+  "keywords": [
+    "content",
+    "distribution",
+    "facebook",
+    "wordpress",
+    "google-drive",
+    "ai",
+    "brand-review"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.7.0",
+    "better-sqlite3": "^12.8.0",
+    "chalk": "^4.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.0",
+    "form-data": "^4.0.6",
+    "googleapis": "^144.0.0",
+    "mime-types": "^2.1.35",
+    "multer": "^1.4.5-lts.2",
+    "node-cron": "^4.2.1",
+    "winston": "^3.14.0"
+  }
+}

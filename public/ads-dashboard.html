@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ads Performance Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --surface: #111520;
+      --surface2: #161b2e;
+      --border: #1e2540;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --accent: #6366f1;
+      --accent2: #818cf8;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --red2: #fca5a5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a1f35 0%, #0d1022 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; background: linear-gradient(135deg, #818cf8, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header-right { display: flex; gap: 12px; align-items: center; }
+    .last-sync { font-size: 12px; color: var(--muted); }
+    .btn-refresh { background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: opacity 0.2s; text-decoration: none; display: inline-block; }
+    .btn-refresh.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-refresh:hover { opacity: 0.85; background: var(--surface2); }
+
+    /* Main layout */
+    .main { padding: 24px; max-width: 1600px; margin: 0 auto; }
+
+    /* KPI Cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; position: relative; overflow: hidden; transition: transform 0.2s; }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 12px 12px 0 0; }
+    .kpi-card.red::before { background: var(--red); }
+    .kpi-card.yellow::before { background: var(--yellow); }
+    .kpi-card.green::before { background: var(--green); }
+    .kpi-card.purple::before { background: var(--accent); }
+    .kpi-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .kpi-value { font-size: 26px; font-weight: 700; line-height: 1; }
+    .kpi-card.red .kpi-value { color: var(--red); }
+    .kpi-card.yellow .kpi-value { color: var(--yellow); }
+    .kpi-card.green .kpi-value { color: var(--green); }
+    .kpi-card.purple .kpi-value { color: var(--accent2); }
+    .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .kpi-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 32px; opacity: 0.08; }
+
+    /* Summary Bar */
+    .summary-bar {
+      display: flex; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 0; margin-bottom: 16px; justify-content: space-around; flex-wrap: wrap; text-align: center;
+    }
+    .summary-item { display: flex; flex-direction: column; flex: 1; border-right: 1px solid var(--border); }
+    .summary-item:last-child { border-right: none; }
+    .summary-item-label { font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+    .summary-item-value { font-size: 15px; font-weight: 700; color: var(--text); }
+
+    /* Filters */
+    .filters { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-group label { font-size: 13px; color: var(--muted); }
+    select, input[type=text] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+    }
+    select:focus, input:focus { border-color: var(--accent); }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .tab { padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Table */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow-x: auto; overflow-y: auto; max-height: 70vh; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 40px;
+      box-sizing: border-box;
+      background: var(--surface2);
+      box-shadow: inset 0 -1px 0 var(--border);
+      padding: 12px 14px;
+      text-align: left;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+    thead th:hover { color: var(--text); }
+    thead th.sort-asc::after { content: ' ↑'; }
+    thead th.sort-desc::after { content: ' ↓'; }
+    thead th.num { text-align: right; }
+    
+    /* Freeze Total row */
+    tbody tr.total-row td {
+      position: sticky;
+      top: 39px; /* offset by header height - 1px for border blending */
+      z-index: 19;
+      background: var(--surface2) !important;
+      box-shadow: inset 0 -1px 0 var(--border);
+    }
+    /* Increase z-index for action buttons inside the sticky row if any */
+    tbody tr.total-row td .btn-action { position: relative; z-index: 20; }
+    
+    tbody tr { border-top: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:hover { background: rgba(99,102,241,0.04); }
+    tbody td { padding: 12px 14px; vertical-align: middle; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .ad-name { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ad-name small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; margin-top: 2px; }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .badge-red { background: rgba(239,68,68,0.15); color: #f87171; }
+    .badge-yellow { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .badge-green { background: rgba(16,185,129,0.15); color: #34d399; }
+    .badge-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .badge-gray { background: rgba(100,116,139,0.15); color: #94a3b8; }
+
+    /* Action buttons */
+    .btn-action {
+      border: none; border-radius: 7px; padding: 6px 12px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-pause { background: rgba(239,68,68,0.15); color: #f87171; }
+    .btn-pause:hover { background: rgba(239,68,68,0.35); }
+    .btn-scale { background: rgba(16,185,129,0.15); color: #34d399; }
+    .btn-scale:hover { background: rgba(16,185,129,0.35); }
+
+    th.sortable { cursor: pointer; user-select: none; padding-right: 18px; }
+    th.sortable::after { content: '↕'; position: absolute; right: 4px; opacity: 0.3; font-size: 10px; }
+    th.sortable[data-order="asc"]::after { content: '↑'; opacity: 1; color: var(--accent2); }
+    th.sortable[data-order="desc"]::after { content: '↓'; opacity: 1; color: var(--accent2); }
+    .btn-disabled { background: rgba(100,116,139,0.1); color: var(--muted); cursor: not-allowed; }
+
+    /* Chart area */
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+    .chart-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .chart-title span { font-size: 12px; color: var(--muted); font-weight: 400; }
+    canvas { max-height: 320px; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; max-width: 440px; width: 90%; }
+    .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .modal p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+    .modal p strong { color: var(--text); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-cancel { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; }
+    .btn-confirm { padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-confirm.red { background: var(--red); color: white; }
+    .btn-confirm.green { background: var(--green); color: white; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 20px; font-size: 14px;
+      transform: translateY(80px); opacity: 0; transition: all 0.3s;
+      max-width: 360px;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--green); }
+    .toast.error { border-color: var(--red); }
+
+    /* Hover Tooltip */
+    #global-tooltip {
+      position: absolute; z-index: 10000;
+      background: rgba(17, 21, 32, 0.95); backdrop-filter: blur(10px);
+      border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      border-radius: 12px; padding: 16px; color: var(--text);
+      max-width: 320px; font-size: 13px; line-height: 1.5;
+      pointer-events: none; opacity: 0; transform: translateY(10px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #global-tooltip.show { opacity: 1; transform: translateY(0); }
+    .target-icon { cursor: help; margin-left: 6px; font-size: 14px; opacity: 0.6; transition: opacity 0.2s; vertical-align: middle; }
+    .target-icon:hover { opacity: 1; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+    @media(max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width: 600px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- AI Modal -->
+<div class="modal-overlay" id="ai-modal">
+  <div class="modal" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+    <h3 id="ai-modal-title">🤖 Phân tích AI</h3>
+    <div id="ai-modal-body" style="font-size:14px; line-height:1.6; padding-right:10px;">Đang suy nghĩ...</div>
+    <div class="modal-actions" style="margin-top: 20px;">
+      <button class="btn-cancel" onclick="closeAiModal()">Thoát</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Xác nhận</h3>
+    <p id="modal-body"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Hủy</button>
+      <button class="btn-confirm" id="modal-confirm-btn" onclick="confirmAction()">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="wallet-modal">
+  <div class="modal">
+    <h3>💳 Quản lý Ví / Nạp Thẻ</h3>
+    <p>Tổng tiền ghi nhận đã nạp: <strong id="wallet-total-dep">0₫</strong></p>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px;">Số tiền xử lý (VNĐ):</label>
+      <input type="number" id="wallet-amount" placeholder="VD: 5000000" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+    </div>
+
+    <div class="modal-actions" style="margin-top: 20px;">
+      <button class="btn-cancel" onclick="closeWalletModal()">Hủy</button>
+      <button class="btn-confirm" style="background: var(--bg); border: 1px solid var(--border); color: var(--text);" onclick="confirmWallet(true)">Cập nhật tổng số đã nạp gốc</button>
+      <button class="btn-confirm green" onclick="confirmWallet(false)">+ Nạp thêm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="global-tooltip"></div>
+
+<div class="header" style="justify-content: space-between;">
+  <div class="header-left" style="display:flex; align-items:center; gap: 12px;">
+    <div style="display:flex; filter:drop-shadow(0 0 8px var(--accent-glow));">
+      <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+        <defs>
+          <linearGradient id="logoGrad2" x1="0" y1="0" x2="32" y2="32">
+            <stop offset="0%" stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+        <rect width="32" height="32" rx="8" fill="url(#logoGrad2)"/>
+        <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1 style="background:linear-gradient(135deg, var(--accent), #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0; font-size: 1.2rem;">Aeslatek Hub</h1>
+  </div>
+
+  <!-- GLOBAL NAV -->
+  <nav style="display:flex; gap: 24px; font-weight: 600; font-size: 14px; flex: 1; justify-content: center;">
+    <a href="/" style="color: var(--muted); text-decoration: none; transition: 0.2s;">Content Distributor</a>
+    <a href="/content-hub" style="color: var(--muted); text-decoration: none; transition: 0.2s;">Content Creator</a>
+    <a href="/ads-dashboard" style="color: var(--text); text-decoration: none; border-bottom: 2px solid var(--accent); padding-bottom:4px;">Ads Dashboard</a>
+  </nav>
+
+  <div class="header-right">
+    <button class="btn-refresh outline" style="background:rgba(34, 197, 94, 0.1);color:#22c55e;border:0px;padding:8px 12px;cursor:pointer;" onclick="openExportModal()">📥 Excel</button>
+    <span class="last-sync" id="last-sync">Đang tải...</span>
+    <button class="btn-refresh outline" style="background:var(--accent-glow);border:none;color:var(--accent);font-weight:600;padding:8px 12px;" onclick="showAiStrategy()">✨ Cố vấn AI</button>
+    <button class="btn-refresh outline" id="btn-sync" onclick="triggerSync()" style="padding:8px 12px;">🔄 Nạp FB</button>
+    <button class="btn-refresh" onclick="loadAll()" style="padding:8px 12px;">↻ Làm mới Dashboard</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Summary Bar -->
+  <div class="summary-bar">
+    <div class="summary-item">
+      <div class="summary-item-label">Số Ad Active</div>
+      <div class="summary-item-value" id="sum-active-ads">—</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">Tiêu Hôm Nay</div>
+      <div class="summary-item-value" id="sum-today-spend">—</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">TB Tiêu/Ngày</div>
+      <div class="summary-item-value" id="sum-avg-spend">—</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">Mess Hôm Nay</div>
+      <div class="summary-item-value" id="sum-today-mess">—</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">Mess Tháng Này</div>
+      <div class="summary-item-value" id="sum-month-mess">—</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">CP Mess (Trung bình)</div>
+      <div class="summary-item-value" id="sum-avg-cpmess" style="color:var(--accent2)">—</div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card red">
+      <div class="kpi-label">🚨 Cần Tắt (Active)</div>
+      <div class="kpi-value" id="kpi-pause">—</div>
+      <div class="kpi-sub" id="kpi-paused-sub">CPMess > 250.000đ</div>
+      <div class="kpi-icon">🔴</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">🟡 Đang Test</div>
+      <div class="kpi-value" id="kpi-testing">—</div>
+      <div class="kpi-sub">Chưa đủ 2 ngày</div>
+      <div class="kpi-icon">⏳</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">🟢 Đủ Điều Kiện Scale</div>
+      <div class="kpi-value" id="kpi-scale">—</div>
+      <div class="kpi-sub" id="kpi-scaled-sub">CPMess ≤ 250.000đ</div>
+      <div class="kpi-icon">🚀</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>💳 Dư nợ Thẻ / Ví</span>
+        <button class="btn-action" style="background:var(--accent);color:white;padding:3px 8px;font-size:11px;" onclick="openWalletModal()">+ Nạp tiền</button>
+      </div>
+      <div class="kpi-value" id="kpi-balance" style="font-size:28px">—</div>
+      <div class="kpi-sub" style="line-height:1.4; margin-top:8px;">
+        Đã chạy: <strong id="kpi-spend-raw" style="color:var(--text)">—</strong><br>
+        <small style="color:var(--muted)">Gộp VAT: <span id="kpi-spend-vat">—</span></small>
+      </div>
+      <div class="kpi-icon">₫</div>
+    </div>
+  </div>
+  
+  <!-- Action Log Card -->
+  <div class="action-log-card" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:20px; display:flex; gap:24px;">
+    <div style="flex:1;">
+      <h4 style="font-size:12px; color:var(--text); text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">📌 Thống Kê Hành Động Hôm Nay</h4>
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:var(--muted)">✨ Ad Lên Mới:</span> <span id="act-today-created" style="font-weight:600;color:var(--accent2)">0</span></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:var(--muted)">📈 Ad Scale Tăng NS:</span> <span id="act-today-scaled" style="font-weight:600;color:var(--green)">0</span></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:var(--muted)">📉 Ad Bị Giảm NS:</span> <span id="act-today-down" style="font-weight:600;color:var(--yellow)">0</span></div>
+      <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:var(--muted)">⏸ Ad Đã Tắt:</span> <span id="act-today-paused" style="font-weight:600;color:var(--red)">0</span></div>
+    </div>
+    <div style="flex:1; border-left:1px dashed var(--border); padding-left:24px;">
+      <h4 style="font-size:12px; color:var(--text); text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">📅 Thống Kê Hành Động Tháng Này</h4>
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:var(--muted)">✨ Tổng Ad Lên Mới:</span> <span id="act-month-created" style="font-weight:600;color:var(--accent2)">0</span></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:var(--muted)">📈 Tổng Ad Scale Tăng NS:</span> <span id="act-month-scaled" style="font-weight:600;color:var(--green)">0</span></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:var(--muted)">📉 Tổng Ad Bị Giảm NS:</span> <span id="act-month-down" style="font-weight:600;color:var(--yellow)">0</span></div>
+      <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:var(--muted)">⏸ Tổng Ad Đã Tắt:</span> <span id="act-month-paused" style="font-weight:600;color:var(--red)">0</span></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('table')">📋 Hiệu suất Ad</div>
+    <div class="tab" onclick="switchTab('daily-report')">🔎 Đánh giá Ngày</div>
+    <div class="tab" onclick="switchTab('chart')">📈 Timeline theo ngày</div>
+    <div class="tab" onclick="switchTab('monthly')">📅 Báo cáo Tháng</div>
+    <div class="tab" onclick="switchTab('services')">📑 Báo cáo Dịch vụ</div>
+    <div class="tab" onclick="switchTab('content')">📸 Content</div>
+  </div>
+
+  <!-- Table Tab -->
+  <div class="tab-content active" id="tab-table">
+    <div class="filters">
+      <div class="filter-group">
+        <label>Trạng thái:</label>
+        <select id="filter-decision" onchange="renderTable()">
+          <option value="">Tất cả</option>
+          <option value="pause">🔴 Cần Tắt</option>
+          <option value="testing">🟡 Đang Test</option>
+          <option value="scale">🟢 Scale</option>
+          <option value="paused">✅ Đã Tắt</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Tìm kiếm:</label>
+        <input type="text" id="filter-search" placeholder="Tên Ad / Campaign..." oninput="renderTable()" style="width:220px"/>
+      </div>
+      <div class="filter-group">
+        <label>Dịch vụ:</label>
+        <select id="filter-service" onchange="renderTable()">
+          <option value="">Tất cả</option>
+          <option value="Chàm bớt">Chàm bớt</option>
+          <option value="U máu">U máu</option>
+          <option value="Nám">Nám</option>
+          <option value="Trẻ hóa">Trẻ hóa</option>
+          <option value="LumiSlim">LumiSlim</option>
+          <option value="Chăm sóc da">Chăm sóc da</option>
+          <option value="Khác">Khác</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Sắp xếp:</label>
+        <select id="filter-sort" onchange="renderTable()">
+          <option value="cost_per_mess_asc">CPMess ↑</option>
+          <option value="cost_per_mess_desc">CPMess ↓</option>
+          <option value="spend_desc">Chi phí ↓</option>
+          <option value="run_days_desc">Tuổi ↓</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <input type="checkbox" id="filter-hide-paused" onchange="renderTable()" checked />
+          Ẩn mục Đã tắt
+        </label>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div class="loading" id="table-loading"><div class="spinner"></div>Đang tải dữ liệu...</div>
+      <div id="table-container" style="display:none">
+        <table id="perf-table">
+          <thead>
+            <tr>
+              <th class="sortable">Ad</th>
+              <th class="num sortable">Ngày</th>
+              <th class="num sortable">N.Sách</th>
+              <th class="num sortable">Tiêu</th>
+              <th class="num sortable">TB/Ng</th>
+              <th class="num sortable">CPM</th>
+              <th class="num sortable">Hiển thị</th>
+              <th class="num sortable">Freq</th>
+              <th class="num sortable">Click</th>
+              <th class="num sortable">CTR</th>
+              <th class="num sortable">Mess</th>
+              <th class="num sortable">CP Mess</th>
+              <th class="sortable">Bot</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="perf-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Tab -->
+  <div class="tab-content" id="tab-chart">
+    <div class="filters">
+      <div class="filter-group">
+        <label>Số ngày:</label>
+        <select id="chart-days" onchange="loadChart()">
+          <option value="7">7 ngày</option>
+          <option value="14">14 ngày</option>
+          <option value="30">30 ngày</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Lọc Ad:</label>
+        <select id="chart-ad-filter" onchange="renderChart()">
+          <option value="">Tất cả</option>
+        </select>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">
+        Cost per Mess theo ngày
+        <span>Đường đỏ = ngưỡng 250.000đ</span>
+      </div>
+      <canvas id="cpm-chart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Chi phí (Spend) theo ngày</div>
+      <canvas id="spend-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Monthly Tab -->
+  <div class="tab-content" id="tab-monthly">
+    <div class="table-wrap">
+      <div id="monthly-table-container">
+        <table id="monthly-table">
+          <thead>
+            <tr>
+              <th class="sortable">Tháng</th>
+              <th class="num sortable">Tổng Camp.</th>
+              <th class="num sortable">Tổng Ad</th>
+              <th class="num sortable">Quỹ Cắn (0 VAT)</th>
+              <th class="num sortable" style="color:var(--accent2)">Quỹ Cắn (+10% VAT)</th>
+              <th class="num sortable">Impressions</th>
+              <th class="num sortable">CPM</th>
+              <th class="num sortable">Tần suất</th>
+              <th class="num sortable">Clicks</th>
+              <th class="num sortable">CTR%</th>
+              <th class="num sortable">Khách Nhắn</th>
+              <th class="num sortable">CPMess</th>
+            </tr>
+          </thead>
+          <tbody id="monthly-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Report Tab -->
+  <div class="tab-content" id="tab-daily-report">
+    <div class="filters">
+      <div class="filter-group">
+        <label>Chọn ngày:</label>
+        <input type="date" id="filter-daily-date" onchange="loadDailyReport()" />
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div id="daily-table-container">
+        <table id="daily-table">
+          <thead>
+            <tr>
+              <th class="sortable">Ad</th>
+              <th class="num sortable">Tiêu</th>
+              <th class="num sortable">CPM</th>
+              <th class="num sortable">Hiển thị</th>
+              <th class="num sortable">Freq</th>
+              <th class="num sortable">Click</th>
+              <th class="num sortable">CTR</th>
+              <th class="num sortable">Khách nhắn</th>
+              <th class="num sortable">CP Mess</th>
+              <th class="sortable">Nhận định</th>
+            </tr>
+          </thead>
+          <tbody id="daily-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- Services Tab -->
+  <div class="tab-content" id="tab-services">
+    <div class="filters">
+      <div class="filter-group">
+        <label>Thời gian:</label>
+        <select id="services-time-filter" onchange="loadServices()">
+          <!-- Populated dynamically by initServiceTimeFilters() -->
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Trạng thái:</label>
+        <select id="services-status-filter" onchange="loadServices()">
+          <option value="">Tất cả Status</option>
+          <option value="ACTIVE">Chỉ Đang Chạy (Active)</option>
+          <option value="PAUSED">Chỉ Đã Tắt (Paused)</option>
+        </select>
+      </div>
+    </div>
+    <div id="service-summary-cards" style="display:flex; gap:12px; margin-bottom:16px; overflow-x:auto; padding-bottom:8px;"></div>
+    <div class="table-wrap">
+      <table id="services-table">
+        <thead>
+          <tr>
+            <th>Dịch vụ</th>
+            <th class="num">Số Ads</th>
+            <th class="num">Lên / Tắt</th>
+            <th class="num">Scale / Giảm NS</th>
+            <th class="num">Chi phí Nhóm</th>
+            <th class="num">Hiển thị</th>
+            <th class="num">CPM</th>
+            <th class="num">Click</th>
+            <th class="num">Link Click</th>
+            <th class="num">CTR</th>
+            <th class="num">Mess Dịch vụ</th>
+            <th class="num">CPMess</th>
+          </tr>
+        </thead>
+        <tbody id="services-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <!-- Content Report Tab -->
+  <div class="tab-content" id="tab-content">
+    <div id="content-summary-cards" style="display:flex; gap:12px; margin-bottom:16px; overflow-x:auto; padding-bottom:8px;">
+      <!-- Populated dynamically -->
+    </div>
+    
+    <div class="chart-card">
+      <div class="chart-title">
+        Ma trận Hiệu Quả Content (Scatter Plot)
+        <span style="font-size:11px;color:var(--muted)">Đường ngang đỏ = Ngưỡng 250k. Vùng xanh dưới bên phải = Ngôi sao.</span>
+      </div>
+      <canvas id="content-scatter-chart" style="max-height: 400px; width: 100%;"></canvas>
+    </div>
+
+    <div class="table-wrap">
+      <div class="loading" id="content-loading" style="display:none"><div class="spinner"></div>Đang tải dữ liệu...</div>
+      <table id="content-table">
+        <thead>
+          <tr>
+            <th>Content / Post URL</th>
+            <th class="num">Tổng Ads</th>
+            <th class="num">Ads Active</th>
+            <th class="num">Tổng Tiêu</th>
+            <th class="num">Hiển thị</th>
+            <th class="num">CPM</th>
+            <th class="num">Click</th>
+            <th class="num">Mess</th>
+            <th class="num">CP Mess</th>
+            <th class="num">Tỉ lệ chốt</th>
+            <th>Nhận định</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="content-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+
+</div>
+
+<script>
+  let allAds = [];
+  let dailyData = [];
+  let pendingAction = null;
+  let cpmChart = null, spendChart = null;
+
+  function initServiceTimeFilters() {
+    const select = document.getElementById('services-time-filter');
+    if (!select) return;
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    
+    let currentMon = new Date(now);
+    currentMon.setDate(now.getDate() + diffToMon);
+    
+    const fDate = d => d.getDate() + '/' + (d.getMonth() + 1);
+    const fYMD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    
+    let weekStr = '<optgroup label="Theo Tuần (T2-CN)">';
+    for(let i=0; i<6; i++) {
+       const start = new Date(currentMon);
+       start.setDate(currentMon.getDate() - i * 7);
+       const end = new Date(start);
+       end.setDate(start.getDate() + 6);
+       
+       let label = `${fDate(start)} - ${fDate(end)}`;
+       if (i === 0) label = "Tuần này (" + label + ")";
+       else if (i === 1) label = "Tuần trước (" + label + ")";
+       else label = "Tuần " + label;
+       
+       // Setting the first option as selected implicitly by browser, or we can add selected
+       const selected = i === 0 ? 'selected' : '';
+       weekStr += `<option value="${fYMD(start)}|${fYMD(end)}" ${selected}>${label}</option>`;
+    }
+    weekStr += '</optgroup>';
+    
+    const basicStr = `
+      <optgroup label="Cơ bản">
+        <option value="this_month">Tháng này</option>
+        <option value="last_month">Tháng trước</option>
+        <option value="today">Hôm nay</option>
+        <option value="yesterday">Hôm qua</option>
+        <option value="30">30 ngày qua</option>
+      </optgroup>`;
+      
+    select.innerHTML = weekStr + basicStr;
+  }
+  
+  // Call immediately to populate select BEFORE loadAll reads its value
+  initServiceTimeFilters();
+
+  function showTooltip(e) {
+    const rawData = e.target.getAttribute('data-target');
+    if (!rawData) return;
+    const tooltip = document.getElementById('global-tooltip');
+    if (!tooltip) return;
+    try {
+      const tg = JSON.parse(rawData);
+      let html = `<div style="font-weight:600;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px;display:flex;align-items:center;gap:6px;">🎯 Phân tích Target</div>`;
+      
+      let locs = [];
+      if (tg.geo_locations) {
+         if (tg.geo_locations.places) locs.push(...tg.geo_locations.places.map(p => p.name ? `${p.name} (+${p.radius || 2}km)` : `Ghim ${p.radius || 2}km`));
+         if (tg.geo_locations.custom_locations) locs.push(...tg.geo_locations.custom_locations.map(c => c.name ? `${c.name} (+${c.radius || 2}km)` : `Ghim ${c.radius || 2}km`));
+         if (tg.geo_locations.regions) locs.push(...tg.geo_locations.regions.map(r=>r.name));
+         if (tg.geo_locations.cities) locs.push(...tg.geo_locations.cities.map(c=>c.name));
+      }
+      if (locs.length === 0 && tg.geo_locations && tg.geo_locations.countries) {
+         locs.push(...tg.geo_locations.countries); // Fallback to VN
+      }
+      
+      let locText = locs.join(', ');
+      if (locs.length > 5) {
+         locText = locs.slice(0, 5).join(', ') + ` <span style="font-size:11px;opacity:0.8;">(và ${locs.length - 5} nơi khác)</span>`;
+      }
+      if (locs.length) html += `<div style="margin-bottom:6px;">📍 <b>Vị trí:</b> <span style="color:var(--muted)">${locText}</span></div>`;
+      
+      let gender = 'Tất cả';
+      if (tg.genders && tg.genders.length === 1) gender = tg.genders[0] === 1 ? 'Nam (Male)' : 'Nữ (Female)';
+      html += `<div style="margin-bottom:6px;">🚻 <b>Giới tính:</b> <span style="color:var(--muted)">${gender}</span></div>`;
+      
+      let minA = tg.age_min || 18;
+      let maxA = tg.age_max || 65;
+      if (tg.age_range && tg.age_range.length === 2) {
+         minA = tg.age_range[0];
+         maxA = tg.age_range[1];
+      }
+      html += `<div style="margin-bottom:6px;">🎂 <b>Độ tuổi:</b> <span style="color:var(--muted)">${minA} - ${maxA}</span></div>`;
+      
+      if (tg.flexible_spec && tg.flexible_spec.length > 0) {
+         let interests = [];
+         tg.flexible_spec.forEach(spec => {
+            if (spec.interests) interests.push(...spec.interests.map(i => i.name));
+            if (spec.behaviors) interests.push(...spec.behaviors.map(b => b.name));
+         });
+         if (interests.length) {
+            html += `<div style="margin-top:8px;">💡 <b>Sở thích/Hành vi:</b><br><span style="color:var(--accent2);font-size:12px;display:inline-block;margin-top:4px;background:rgba(99,102,241,0.1);padding:4px 8px;border-radius:6px;line-height:1.6;">${interests.join(', ')}</span></div>`;
+         }
+      } else {
+         html += `<div style="margin-top:8px;">💡 <b>Target:</b> <span style="color:var(--green)">Broad (Không target sở thích)</span></div>`;
+      }
+      
+      tooltip.innerHTML = html;
+      tooltip.classList.add('show');
+      
+      const rect = e.target.getBoundingClientRect();
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      const scrollX = window.scrollX || document.documentElement.scrollLeft;
+      
+      let top = rect.top + scrollY - tooltip.offsetHeight - 12;
+      let left = rect.left + scrollX + (rect.width/2) - (tooltip.offsetWidth/2);
+      
+      if (top < scrollY) top = rect.bottom + scrollY + 12;
+      if (left < 10) left = 10;
+      
+      tooltip.style.top = top + 'px';
+      tooltip.style.left = left + 'px';
+      
+    } catch(err) { console.error(err); }
+  }
+  
+  function hideTooltip() {
+    const tooltip = document.getElementById('global-tooltip');
+    if (tooltip) tooltip.classList.remove('show');
+  }
+
+  const fmt = (n) => n == null ? '—' : Math.round(n).toLocaleString('vi-VN') + '₫';
+  const fmtNum = (n) => n == null ? '—' : Math.round(n).toLocaleString('vi-VN');
+
+  // ---- LOAD ALL ----
+  async function loadAll() {
+    document.getElementById('last-sync').textContent = 'Đang tải...';
+    await Promise.all([loadSummary(), loadWallet(), loadPerformance(), loadChart(), loadMonthly(), loadDailyReport(), loadServices(), loadContentReport()]);
+  }
+
+  let contentScatterChart = null;
+  let contentData = [];
+
+  async function loadContentReport() {
+    document.getElementById('content-loading').style.display = 'block';
+    
+    // Fetch data
+    const r = await fetch('/api/ads/content').then(x => x.json());
+    if (!r.success) {
+      document.getElementById('content-loading').style.display = 'none';
+      return;
+    }
+    
+    contentData = r.data;
+    
+    const data = r.data;
+    
+    // 1. Calculate Summary Cards
+    let winner = null, loser = null, hook = null;
+    let maxWins = -1, maxWaste = -1, maxCtr = -1;
+    
+    data.forEach(d => {
+      // Winner: Lowest CPMess below target, highest Volume
+      if (d.category === 'winner' && d.total_spend > maxWins) {
+        maxWins = d.total_spend;
+        winner = d;
+      }
+      // Loser: Highest Spend above target
+      if (d.category === 'loser' && d.total_spend > maxWaste) {
+        maxWaste = d.total_spend;
+        loser = d;
+      }
+      // Hook: Highest CTR with decent impressions (>1000)
+      if (d.total_impressions > 1000 && d.ctr_all > maxCtr) {
+        maxCtr = d.ctr_all;
+        hook = d;
+      }
+    });
+
+    const summaryHtml = `
+      <div class="kpi-card purple" style="flex:1;min-width:250px">
+        <div class="kpi-label">🏆 Winner (Vô Địch)</div>
+        <div class="kpi-value" style="font-size:18px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${winner ? winner.sample_ad_name : 'Chưa có'}
+        </div>
+        <div class="kpi-sub" style="line-height:1.4">
+          Tiêu: <strong style="color:var(--text)">${winner ? fmt(winner.total_spend) : '—'}</strong><br>
+          CPMess: <strong style="color:var(--green)">${winner ? fmt(winner.cost_per_mess) : '—'}</strong>
+        </div>
+      </div>
+      <div class="kpi-card green" style="flex:1;min-width:250px">
+        <div class="kpi-label">🧲 Mồi Tốt Nhất (Top Hook)</div>
+        <div class="kpi-value" style="font-size:18px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${hook ? hook.sample_ad_name : 'Chưa có'}
+        </div>
+        <div class="kpi-sub" style="line-height:1.4">
+          CTR Toàn trình: <strong style="color:var(--text)">${hook ? hook.ctr_all + '%' : '—'}</strong><br>
+          Tiêu: <strong style="color:var(--text)">${hook ? fmt(hook.total_spend) : '—'}</strong>
+        </div>
+      </div>
+      <div class="kpi-card red" style="flex:1;min-width:250px">
+        <div class="kpi-label">🗑️ Hố Đen (Top Đốt Tiền)</div>
+        <div class="kpi-value" style="font-size:18px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${loser ? loser.sample_ad_name : 'Chưa có'}
+        </div>
+        <div class="kpi-sub" style="line-height:1.4">
+          Tiêu: <strong style="color:var(--text)">${loser ? fmt(loser.total_spend) : '—'}</strong><br>
+          CPMess: <strong style="color:var(--red)">${loser ? fmt(loser.cost_per_mess) : '—'}</strong>
+        </div>
+      </div>
+    `;
+    document.getElementById('content-summary-cards').innerHTML = summaryHtml;
+
+    // 2. Render Scatter Chart
+    const ctx = document.getElementById('content-scatter-chart').getContext('2d');
+    if (contentScatterChart) contentScatterChart.destroy();
+    
+    const datasets = data.map(d => {
+      let color = '#94a3b8'; // Default monitoring
+      if (d.category === 'winner') color = '#34d399';
+      if (d.category === 'loser') color = '#f87171';
+      if (d.category === 'testing') color = '#fbbf24';
+      
+      return {
+        label: d.sample_ad_name,
+        data: [{ x: d.total_spend, y: d.cost_per_mess, r: Math.max(5, Math.min(20, d.total_spend / 500000)) }],
+        backgroundColor: color + '99',
+        borderColor: color,
+        borderWidth: 1
+      };
+    });
+
+    contentScatterChart = new Chart(ctx, {
+      type: 'bubble',
+      data: { datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const d = ctx.raw;
+                return `${ctx.dataset.label}: Tiêu ${fmt(d.x).replace('₫','')}đ | CPMess: ${fmt(d.y).replace('₫','')}đ`;
+              }
+            }
+          },
+          annotation: {
+            annotations: {
+              line1: {
+                type: 'line',
+                yMin: 250000,
+                yMax: 250000,
+                borderColor: 'rgba(239, 68, 68, 0.5)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+              }
+            }
+          }
+        },
+        scales: {
+          x: { 
+            title: { display: true, text: 'Tổng Spend (VNĐ)' },
+            ticks: { color: '#64748b', callback: v => (v/1000000).toFixed(1) + 'Tr' }, 
+            grid: { color: '#1e2540' } 
+          },
+          y: { 
+            title: { display: true, text: 'CPMess (VNĐ)' },
+            ticks: { color: '#64748b', callback: v => (v/1000).toFixed(0) + 'k' }, 
+            grid: { color: '#1e2540' } 
+          }
+        }
+      }
+    });
+
+    // 3. Render Table
+    const tbody = document.getElementById('content-tbody');
+    tbody.innerHTML = data.map((d, index) => {
+      let insight = '👀 Monitor';
+      let rowStyle = '';
+      if (d.category === 'winner') { insight = '🔥 WINNER (Vít mạnh)'; rowStyle = 'background: rgba(16,185,129,0.05);'; }
+      if (d.category === 'loser') { insight = '🗑️ FATIGUE (Cần tắt)'; rowStyle = 'background: rgba(239,68,68,0.05);'; }
+      if (d.category === 'testing') { insight = '🟡 Mới Test (Nuôi)'; }
+
+      const link = (d.post_url && d.post_url.trim()) ? `<a href="${d.post_url}" target="_blank" style="color:var(--accent2);text-decoration:underline;">${d.sample_ad_name}</a>` : `${d.sample_ad_name}`;
+      const actionHtml = d.active_ads > 0 
+        ? `<button class="btn-action btn-pause" onclick="pauseAllAds('${d.ad_ids}', '${d.sample_ad_name.replace(/'/g, "\\'")}')">⏸ Tắt ${d.active_ads} Ads</button>` 
+        : `<button class="btn-action btn-disabled" disabled>Đã tắt hết</button>`;
+
+      const aiButton = `<button class="btn-action" style="background:#8b5cf6" onclick="analyzeContent(${index})">🤖 Phân tích</button>`;
+        
+      const cpmColor = (d.cost_per_mess > 250000) ? 'var(--red)' : (d.cost_per_mess > 0 ? 'var(--green)' : 'inherit');
+      // Tỉ lệ chốt (Mess/Click)
+      const convRate = d.total_clicks > 0 ? (d.total_mess / d.total_clicks * 100).toFixed(1) + '%' : '0%';
+
+      return `
+        <tr style="${rowStyle}">
+          <td style="max-width:300px">
+            <div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${link}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Target: ${d.targeting ? 'Custom' : 'Broad'}</div>
+          </td>
+          <td class="num">${d.total_ads}</td>
+          <td class="num" style="${d.active_ads > 0 ? 'color:var(--accent2);font-weight:600;' : ''}">${d.active_ads}</td>
+          <td class="num">${fmt(d.total_spend)}</td>
+          <td class="num">${fmtNum(d.total_impressions)}</td>
+          <td class="num">${fmtNum(d.cpm)}₫</td>
+          <td class="num">${fmtNum(d.total_clicks)}</td>
+          <td class="num">${fmtNum(d.total_mess)}</td>
+          <td class="num" style="font-weight:700;color:${cpmColor}">${fmt(d.cost_per_mess)}</td>
+          <td class="num">${convRate}</td>
+          <td style="font-weight:600">${insight}</td>
+          <td><div style="display:flex;gap:4px">${aiButton}${actionHtml}</div></td>
+        </tr>
+      `;
+    }).join('');
+    
+    document.getElementById('content-loading').style.display = 'none';
+  }
+
+  async function pauseAllAds(commaIds, contentName) {
+    if (!confirm(`Bạn có chắc chắn muốn TẮT toàn bộ Ads đang dùng Content này không?\\n\\nContent: ${contentName}\\nID Ads: ${commaIds.split(',').length} Ads\n\\nLưu ý: Thao tác này KHÔNG THỂ HOÀN TÁC.`)) return;
+    
+    const ids = commaIds.split(',');
+    showToast(`Đang gửi lệnh tắt ${ids.length} ads...`, 'success');
+    let successCount = 0;
+    
+    for (let i = 0; i < ids.length; i++) {
+        try {
+            const r = await fetch(`/api/ads/${ids[i]}/pause`, { method: 'POST' }).then(x => x.json());
+            if (r.success) successCount++;
+        } catch(e) {}
+    }
+    showToast(`✅ Đã tắt thành công ${successCount}/${ids.length} ads.`, 'success');
+    setTimeout(loadAll, 1000);
+  }
+
+  async function loadServices() {
+    const timeRange = document.getElementById('services-time-filter')?.value || '30';
+    const status = document.getElementById('services-status-filter')?.value || '';
+    const r = await fetch('/api/ads/services?timeRange=' + timeRange + '&status=' + status).then(x => x.json());
+    if (!r.success) return;
+    const tbody = document.getElementById('services-tbody');
+    if (r.data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">Chưa có dữ liệu</div></td></tr>`;
+      document.getElementById('service-summary-cards').innerHTML = '';
+      return;
+    }
+    
+    // Thu gọn tiêu đề động nếu rảnh
+    
+    let t_ads = 0, t_spend = 0, t_impr = 0, t_ck = 0, t_lck = 0, t_mess = 0;
+    let t_created = 0, t_paused = 0, t_scaled = 0, t_decreased = 0;
+    r.data.forEach(s => { 
+      t_ads+=s.ad_count; t_spend+=s.total_spend; 
+      t_impr+=s.total_impressions; t_ck+=s.total_clicks; 
+      t_lck+=s.total_link_clicks; t_mess+=s.total_mess; 
+      t_created+=(s.ads_created||0); t_paused+=(s.ads_paused||0);
+      t_scaled+=(s.ads_scaled||0); t_decreased+=(s.ads_decreased||0);
+    });
+    const cp_mess = t_mess > 0 ? (t_spend / t_mess) : t_spend;
+    const t_cpm = t_impr > 0 ? (t_spend / t_impr) * 1000 : 0;
+    const t_ctr = t_impr > 0 ? (t_ck / t_impr) * 100 : 0;
+
+    let sumTargetSpend = 0;
+    r.data.forEach(s => sumTargetSpend += s.target_spend || 0);
+
+    const cardsHtml = r.data.map(svc => {
+      const pct = t_spend > 0 ? ((svc.total_spend / t_spend) * 100).toFixed(1) : 0;
+      let kpiHtml = '';
+      if (svc.target_spend > 0) {
+        const kpiPct = Math.min((svc.total_spend / svc.target_spend) * 100, 100).toFixed(0);
+        const barColor = kpiPct > 90 ? 'var(--red)' : (kpiPct > 70 ? 'var(--yellow)' : 'var(--green)');
+        kpiHtml = `
+          <div style="margin-top:10px;">
+            <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
+              <span style="color:var(--muted)">KPI Ngân sách</span>
+              <span style="color:${barColor}; font-weight:bold;">${kpiPct}%</span>
+            </div>
+            <div style="height:4px; width:100%; background:var(--surface2); border-radius:4px; overflow:hidden;">
+              <div style="height:100%; width:${kpiPct}%; background:${barColor};"></div>
+            </div>
+            <div style="font-size:10px; color:var(--muted); text-align:right; margin-top:2px;">${fmt(svc.target_spend)}</div>
+          </div>
+        `;
+      }
+      
+      return `
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; min-width:200px; flex-shrink:0;">
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:600; margin-bottom:4px;">${svc.service}</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="font-size:16px; font-weight:700; color:var(--text);">${fmt(svc.total_spend)}</div>
+            <div style="font-size:11px; color:var(--accent2); font-weight:500;">${pct}% <span style="color:var(--muted)">tổng</span></div>
+          </div>
+          ${kpiHtml}
+        </div>
+      `;
+    }).join('');
+    
+    let totalKpiHtml = '';
+    if (sumTargetSpend > 0) {
+      const tKpiPct = Math.min((t_spend / sumTargetSpend) * 100, 100).toFixed(0);
+      const tBarColor = tKpiPct > 90 ? 'var(--red)' : (tKpiPct > 70 ? 'var(--yellow)' : 'var(--green)');
+      totalKpiHtml = `
+          <div style="margin-top:10px;">
+            <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
+              <span style="color:var(--muted)">Tổng KPI Ngân sách</span>
+              <span style="color:${tBarColor}; font-weight:bold;">${tKpiPct}%</span>
+            </div>
+            <div style="height:4px; width:100%; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
+              <div style="height:100%; width:${tKpiPct}%; background:${tBarColor};"></div>
+            </div>
+            <div style="font-size:10px; color:var(--muted); text-align:right; margin-top:2px;">${fmt(sumTargetSpend)}</div>
+          </div>
+      `;
+    }
+
+    // Thêm card tổng cộng vào đầu tiên để soi chuẩn
+    const totalCardHtml = `
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; min-width:200px; flex-shrink:0;">
+          <div style="font-size:11px; color:var(--accent2); text-transform:uppercase; font-weight:600; margin-bottom:4px;">TỔNG CỘNG</div>
+          <div style="font-size:16px; font-weight:700; color:var(--accent2);">${fmt(t_spend)}</div>
+          <div style="font-size:11px; margin-top:4px; display:flex; justify-content:space-between;">
+             <span style="color:var(--accent2); font-weight:500;">100%</span>
+             <span style="color:var(--muted)">tổng tiền</span>
+          </div>
+          ${totalKpiHtml}
+        </div>
+    `;
+
+    document.getElementById('service-summary-cards').innerHTML = totalCardHtml + cardsHtml;
+
+    const totalRow = `
+      <tr class="total-row" style="background:var(--surface2);font-weight:bold;">
+        <td style="color:var(--accent2)">TỔNG CỘNG</td>
+        <td class="num">${t_ads}</td>
+        <td class="num"><span style="color:var(--accent2)">+${t_created}</span> / <span style="color:var(--red)">-${t_paused}</span></td>
+        <td class="num"><span style="color:var(--green)">+${t_scaled}</span> / <span style="color:var(--yellow)">-${t_decreased}</span></td>
+        <td class="num">${fmt(t_spend)}</td>
+        <td class="num">${fmtNum(t_impr)}</td>
+        <td class="num">${fmt(t_cpm)}</td>
+        <td class="num">${fmtNum(t_ck)}</td>
+        <td class="num">${fmtNum(t_lck)}</td>
+        <td class="num">${t_ctr.toFixed(2)}%</td>
+        <td class="num">${fmtNum(t_mess)}</td>
+        <td class="num">${fmt(cp_mess)}</td>
+      </tr>`;
+    
+    tbody.innerHTML = totalRow + r.data.map(svc => `
+      <tr>
+        <td style="font-weight:600;color:var(--accent2)">${svc.service}</td>
+        <td class="num">${svc.ad_count}</td>
+        <td class="num"><span style="color:var(--accent2)">+${svc.ads_created||0}</span> / <span style="color:var(--red)">-${svc.ads_paused||0}</span></td>
+        <td class="num"><span style="color:var(--green)">+${svc.ads_scaled||0}</span> / <span style="color:var(--yellow)">-${svc.ads_decreased||0}</span></td>
+        <td class="num">${fmt(svc.total_spend)}</td>
+        <td class="num">${fmtNum(svc.total_impressions)}</td>
+        <td class="num">${fmt(svc.cpm)}</td>
+        <td class="num">${fmtNum(svc.total_clicks)}</td>
+        <td class="num">${fmtNum(svc.total_link_clicks)}</td>
+        <td class="num">${svc.ctr.toFixed(2)}%</td>
+        <td class="num">${fmtNum(svc.total_mess)}</td>
+        <td class="num" style="font-weight:600">${fmt(svc.cost_per_mess)}</td>
+      </tr>
+    `).join('');
+  }
+
+  async function loadWallet() {
+    const r = await fetch('/api/ads/wallet').then(x => x.json());
+    if (!r.success) return;
+    const { balance, all_time_spend_vat, all_time_spend_raw, total_deposits } = r.data;
+    
+    const balanceEl = document.getElementById('kpi-balance');
+    balanceEl.textContent = fmt(balance);
+    if (balance < 0) balanceEl.style.color = 'var(--red)';
+    else balanceEl.style.color = 'var(--accent2)';
+
+    document.getElementById('kpi-spend-raw').textContent = fmt(all_time_spend_raw);
+    document.getElementById('kpi-spend-vat').textContent = fmt(all_time_spend_vat);
+    document.getElementById('wallet-total-dep').textContent = fmt(total_deposits);
+  }
+
+  async function loadSummary() {
+    const r = await fetch('/api/ads/summary').then(x => x.json());
+    if (!r.success) return;
+    const d = r.data;
+    document.getElementById('kpi-pause').textContent = fmtNum(d.need_pause);
+    document.getElementById('kpi-testing').textContent = fmtNum(d.testing);
+    document.getElementById('kpi-scale').textContent = fmtNum(d.can_scale);
+    
+    document.getElementById('kpi-paused-sub').innerHTML = `Đã tắt hôm nay: <strong style="color:var(--text)">${fmtNum(d.already_paused)}</strong> Ad`;
+    document.getElementById('kpi-scaled-sub').innerHTML = `Vừa Scale (Trong 24h): <strong style="color:var(--text)">${fmtNum(d.already_scaled)}</strong> Ad`;
+    
+    document.getElementById('sum-active-ads').textContent = fmtNum(d.active_ads) + ' Ads';
+    document.getElementById('sum-today-spend').textContent = fmt(d.today_spend);
+    document.getElementById('sum-avg-spend').textContent = fmt(d.avg_daily_spend);
+    document.getElementById('sum-today-mess').textContent = fmtNum(d.today_mess);
+    document.getElementById('sum-month-mess').textContent = fmtNum(d.month_mess);
+    document.getElementById('sum-avg-cpmess').textContent = fmt(d.avg_cost_per_mess);
+    
+    document.getElementById('act-today-created').textContent = fmtNum(d.today_created);
+    document.getElementById('act-today-scaled').textContent = fmtNum(d.today_scaled);
+    document.getElementById('act-today-down').textContent = fmtNum(d.today_down);
+    document.getElementById('act-today-paused').textContent = fmtNum(d.today_paused);
+    
+    document.getElementById('act-month-created').textContent = fmtNum(d.month_created);
+    document.getElementById('act-month-scaled').textContent = fmtNum(d.month_scaled);
+    document.getElementById('act-month-down').textContent = fmtNum(d.month_down);
+    document.getElementById('act-month-paused').textContent = fmtNum(d.month_paused);
+    
+    if (d.last_sync_time) {
+      const syncTime = new Date(d.last_sync_time + 'Z');
+      document.getElementById('last-sync').textContent = 'Dữ liệu mới nhất lúc: ' + syncTime.toLocaleString('vi-VN', { 
+        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' 
+      });
+    }
+  }
+
+  async function loadPerformance() {
+    document.getElementById('table-loading').style.display = 'block';
+    document.getElementById('table-container').style.display = 'none';
+    const r = await fetch('/api/ads/performance').then(x => x.json());
+    if (r.success) {
+      allAds = r.data;
+      renderTable();
+    }
+    document.getElementById('table-loading').style.display = 'none';
+    document.getElementById('table-container').style.display = 'block';
+  }
+
+  async function loadChart() {
+    const days = document.getElementById('chart-days').value;
+    const r = await fetch(`/api/ads/daily?days=${days}`).then(x => x.json());
+    if (r.success) {
+      dailyData = r.data;
+      // Populate ad filter
+      const adIds = [...new Set(dailyData.map(d => d.ad_id))];
+      const sel = document.getElementById('chart-ad-filter');
+      sel.innerHTML = '<option value="">Tất cả</option>';
+      adIds.forEach(id => {
+        const name = dailyData.find(d => d.ad_id === id)?.ad_name || id;
+        sel.innerHTML += `<option value="${id}">${name.substring(0,40)}</option>`;
+      });
+      renderChart();
+    }
+  }
+
+  async function loadMonthly() {
+    const r = await fetch('/api/ads/monthly').then(x => x.json());
+    if (!r.success) return;
+    const tbody = document.getElementById('monthly-tbody');
+    if (r.data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">Chưa có dữ liệu tháng</div></td></tr>`;
+      return;
+    }
+    let t_camp = 0, t_ads = 0, t_spend = 0, t_vat = 0, t_imp = 0, t_clicks = 0, t_mess = 0;
+    r.data.forEach(m => {
+      t_camp += m.total_campaigns; t_ads += m.total_ads; t_spend += m.spend; 
+      t_vat += m.spend_vat; t_imp += m.impressions; t_clicks += m.clicks; t_mess += m.mess_started;
+    });
+    const cpm = t_imp > 0 ? (t_spend / t_imp * 1000) : 0;
+    const ctr = t_imp > 0 ? (t_clicks / t_imp * 100) : 0;
+    const cp_mess = t_mess > 0 ? (t_spend / t_mess) : t_spend;
+    
+    const totalRow = `
+      <tr class="total-row" style="background:var(--surface2);font-weight:700;">
+        <td style="color:var(--accent2)">TỔNG TẤT CẢ</td>
+        <td class="num">${fmtNum(t_camp)}</td>
+        <td class="num">${fmtNum(t_ads)}</td>
+        <td class="num">${fmt(t_spend)}</td>
+        <td class="num" style="color:var(--accent2)">${fmt(t_vat)}</td>
+        <td class="num">${fmtNum(t_imp)}</td>
+        <td class="num">${fmtNum(cpm)}₫</td>
+        <td class="num">—</td>
+        <td class="num">${fmtNum(t_clicks)}</td>
+        <td class="num">${ctr.toFixed(2)}%</td>
+        <td class="num">${fmtNum(t_mess)}</td>
+        <td class="num">${fmt(cp_mess)}</td>
+      </tr>`;
+
+    tbody.innerHTML = totalRow + r.data.map(m => {
+      return `<tr>
+        <td style="font-weight:600">${m.month}</td>
+        <td class="num">${m.total_campaigns}</td>
+        <td class="num">${m.total_ads}</td>
+        <td class="num">${fmt(m.spend)}</td>
+        <td class="num" style="font-weight:700;color:var(--accent2)">${fmt(m.spend_vat)}</td>
+        <td class="num">${fmtNum(m.impressions)}</td>
+        <td class="num">${fmtNum(m.cpm)}₫</td>
+        <td class="num">${m.avg_frequency ?? '—'}</td>
+        <td class="num">${fmtNum(m.clicks)}</td>
+        <td class="num">${m.ctr_all ?? 0}%</td>
+        <td class="num">${fmtNum(m.mess_started)}</td>
+        <td class="num">${fmt(m.cost_per_mess)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ---- DAILY REPORT ----
+  async function loadDailyReport() {
+    const rawDate = document.getElementById('filter-daily-date').value;
+    const dateParam = rawDate ? `?date=${rawDate}` : '';
+    const r = await fetch(`/api/ads/daily-report${dateParam}`).then(x => x.json());
+    if (!r.success) return;
+    
+    if (!rawDate && r.data.length > 0) {
+      document.getElementById('filter-daily-date').value = r.data[0].date;
+    }
+
+    const tbody = document.getElementById('daily-tbody');
+    if (r.data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">Không có dữ liệu cho ngày này</div></td></tr>`;
+      return;
+    }
+
+    function renderDiff(today, avg, reverse = false) {
+      if (today == null || avg == null || avg === 0 || isNaN(avg) || isNaN(today)) return '—';
+      const pct = (today - avg) / avg * 100;
+      if (Math.abs(pct) < 1) return '<span style="color:var(--muted)">~ 0%</span>';
+      
+      const isUp = pct > 0;
+      let isGood = reverse ? !isUp : isUp; 
+      
+      const color = isGood ? 'var(--green)' : 'var(--red)';
+      const arrow = isUp ? '↑' : '↓';
+      return `<span style="color:${color};font-weight:600">${arrow} ${Math.abs(pct).toFixed(1)}%</span>`;
+    }
+
+    let t_spend=0, t_mess=0, t_imp=0, t_clicks=0, t_freq_imp=0;
+    let avg_t_spend=0, avg_t_mess=0, avg_t_imp=0, avg_t_clicks=0, avg_t_freq_imp=0;
+    
+    r.data.forEach(ad => {
+      t_spend += (ad.today_spend||0); t_mess += (ad.today_mess||0); t_imp += (ad.today_impressions||0); t_clicks += (ad.today_clicks||0);
+      if (ad.today_frequency && ad.today_impressions) t_freq_imp += (ad.today_frequency * ad.today_impressions);
+      avg_t_spend += (ad.avg_spend||0); avg_t_mess += (ad.avg_mess||0); avg_t_imp += (ad.avg_impressions||0); avg_t_clicks += (ad.avg_clicks||0);
+      if (ad.avg_frequency && ad.avg_impressions) avg_t_freq_imp += (ad.avg_frequency * ad.avg_impressions);
+    });
+    
+    const t_cpm = t_imp > 0 ? (t_spend / t_imp * 1000) : 0;
+    const t_ctr = t_imp > 0 ? (t_clicks / t_imp * 100) : 0;
+    const t_cpmess = t_mess > 0 ? (t_spend / t_mess) : t_spend;
+    const t_freq = t_imp > 0 ? (t_freq_imp / t_imp) : 0;
+
+    const avg_t_cpm = avg_t_imp > 0 ? (avg_t_spend / avg_t_imp * 1000) : 0;
+    const avg_t_ctr = avg_t_imp > 0 ? (avg_t_clicks / avg_t_imp * 100) : 0;
+    const avg_t_cpmess = avg_t_mess > 0 ? (avg_t_spend / avg_t_mess) : avg_t_spend;
+    const avg_t_freq = avg_t_imp > 0 ? (avg_t_freq_imp / avg_t_imp) : 0;
+
+    const t_spendDiff = renderDiff(t_spend, avg_t_spend, false);
+    const t_messDiff  = renderDiff(t_mess, avg_t_mess, false);
+    const t_cpmDiff   = renderDiff(t_cpmess, avg_t_cpmess, true);
+    const t_impDiff   = renderDiff(t_imp, avg_t_imp, false);
+    const t_cpmDiffAvg= renderDiff(t_cpm, avg_t_cpm, true);
+    const t_freqDiff  = renderDiff(t_freq, avg_t_freq, true);
+    const t_clickDiff = renderDiff(t_clicks, avg_t_clicks, false);
+    const t_ctrDiff   = renderDiff(t_ctr, avg_t_ctr, false);
+
+    let t_judgment = 'Bình thường';
+    let t_jColor = 'var(--muted)';
+    if (t_cpmess > 250000 || (!t_mess && t_spend > 50000)) {
+      t_judgment = 'Vượt Target 🔴'; t_jColor = 'var(--red)';
+    } else if (t_cpmess <= 250000 && t_cpmess > 0) {
+      t_judgment = 'Đạt Target 🟢'; t_jColor = 'var(--green)';
+    } else if (t_mess === 0) {
+      t_judgment = 'Chưa có số ⏳';
+    }
+
+    const totalRow = `
+      <tr class="total-row" style="background:var(--surface2);font-weight:700;">
+        <td style="color:var(--accent2)">TỔNG CỘNG (${r.data.length} Ads)</td>
+        <td class="num">
+          <div style="font-size:14px">${fmt(t_spend)}</div>
+          <div style="font-size:11px;margin-top:2px;">${t_spendDiff} <span style="color:var(--muted)">vs ${fmtNum(avg_t_spend)}đ</span></div>
+        </td>
+        <td class="num">
+          <div style="font-size:14px">${fmtNum(t_cpm)}₫</div>
+          <div style="font-size:11px;margin-top:2px;">${t_cpmDiffAvg} <span style="color:var(--muted)">vs ${fmtNum(avg_t_cpm)}₫</span></div>
+        </td>
+        <td class="num">
+          <div style="font-size:14px">${fmtNum(t_imp)}</div>
+          <div style="font-size:11px;margin-top:2px;">${t_impDiff} <span style="color:var(--muted)">vs ${fmtNum(avg_t_imp)}</span></div>
+        </td>
+        <td class="num">
+          <div style="font-size:14px">${t_freq > 0 ? t_freq.toFixed(2) : '—'}</div>
+          <div style="font-size:11px;margin-top:2px;">${t_freqDiff} <span style="color:var(--muted)">vs ${avg_t_freq > 0 ? avg_t_freq.toFixed(2) : '—'}</span></div>
+        </td>
+        <td class="num">
+          <div style="font-size:14px">${fmtNum(t_clicks)}</div>
+          <div style="font-size:11px;margin-top:2px;">${t_clickDiff} <span style="color:var(--muted)">vs ${fmtNum(avg_t_clicks)}</span></div>
+        </td>
+        <td class="num">
+          <div style="font-size:14px">${t_ctr.toFixed(2)}%</div>
+          <div style="font-size:11px;margin-top:2px;">${t_ctrDiff} <span style="color:var(--muted)">vs ${avg_t_ctr.toFixed(2)}%</span></div>
+        </td>
+        <td class="num">
+          <div style="font-size:14px">${fmtNum(t_mess)}</div>
+          <div style="font-size:11px;margin-top:2px;">${t_messDiff} <span style="color:var(--muted)">vs ${fmtNum(avg_t_mess)}</span></div>
+        </td>
+        <td class="num">
+          <div style="font-size:14px;color:var(--accent2)">${fmt(t_cpmess)}</div>
+          <div style="font-size:11px;margin-top:2px;">${t_cpmDiff} <span style="color:var(--muted)">vs ${fmtNum(avg_t_cpmess)}đ</span></div>
+        </td>
+        <td style="font-weight:600;color:${t_jColor}">${t_judgment}</td>
+      </tr>`;
+
+    tbody.innerHTML = totalRow + r.data.map(ad => {
+      const cleanId = (ad.ad_id || '').replace(/^'/, '');
+      
+      const spendDiff = renderDiff(ad.today_spend, ad.avg_spend, false);
+      const messDiff  = renderDiff(ad.today_mess, ad.avg_mess, false);
+      const cpmDiff   = ad.today_cost_per_mess && ad.avg_cost_per_mess 
+                          ? renderDiff(ad.today_cost_per_mess, ad.avg_cost_per_mess, true) 
+                          : '—';
+                          
+      const impDiff    = renderDiff(ad.today_impressions, ad.avg_impressions, false);
+      const cpmDiffAvg = renderDiff(ad.today_cpm, ad.avg_cpm, true);
+      const freqDiff   = renderDiff(ad.today_frequency, ad.avg_frequency, true); 
+      const clickDiff  = renderDiff(ad.today_clicks, ad.avg_clicks, false);
+      const ctrDiff    = renderDiff(ad.today_ctr, ad.avg_ctr, false);
+      
+      let judgment = 'Bình thường';
+      let jColor = 'var(--muted)';
+      if (ad.today_cost_per_mess > ad.avg_cost_per_mess * 1.2 || (!ad.today_mess && ad.today_spend > 50000)) {
+        judgment = 'Tệ hơn TB 🔴'; jColor = 'var(--red)';
+      } else if (ad.today_cost_per_mess < ad.avg_cost_per_mess * 0.8 && ad.today_mess > 0) {
+        judgment = 'Tốt hơn TB 🟢'; jColor = 'var(--green)';
+      } else if (ad.today_mess === 0 && ad.avg_mess === 0) {
+        judgment = 'Chưa có số ⏳';
+      }
+
+      const tgAttr = ad.targeting ? ad.targeting.replace(/"/g, '&quot;') : '';
+      const tgIcon = tgAttr ? `<span class="target-icon" data-target="${tgAttr}" onmouseenter="showTooltip(event)" onmouseleave="hideTooltip()">🎯</span>` : '';
+
+      const displayName = ad.post_url 
+        ? `<a href="${ad.post_url}" target="_blank" style="color:inherit; text-decoration:underline;">${ad.ad_name || cleanId}</a>${tgIcon}`
+        : (ad.ad_name || cleanId) + tgIcon;
+
+      return `<tr>
+        <td>
+          <div class="ad-name" style="margin-bottom: 6px; font-weight: 600;">${displayName}</div>
+          <div style="font-size: 11px; color: var(--muted); margin-bottom: 2px;"><span style="color:var(--text);opacity:0.7">Camp:</span> ${ad.campaign_name || '—'}</div>
+          <div style="font-size: 11px; color: var(--muted); margin-bottom: 2px;"><span style="color:var(--text);opacity:0.7">Nhóm:</span> ${ad.adset_name || '—'}</div>
+          <div style="font-size: 10px; color: var(--accent2); margin-top: 4px; font-family: monospace;">ID: ${cleanId}</div>
+        </td>
+        <td class="num">
+          <div style="font-weight:600">${fmt(ad.today_spend)}</div>
+          <div style="font-size:11px;margin-top:2px;">${spendDiff} <span style="color:var(--muted)">vs ${fmtNum(ad.avg_spend)}đ</span></div>
+        </td>
+        <td class="num">
+          <div style="font-weight:600">${fmtNum(ad.today_cpm)}₫</div>
+          <div style="font-size:11px;margin-top:2px;">${cpmDiffAvg} <span style="color:var(--muted)">vs ${fmtNum(ad.avg_cpm)}₫</span></div>
+        </td>
+        <td class="num">
+          <div style="font-weight:600">${fmtNum(ad.today_impressions)}</div>
+          <div style="font-size:11px;margin-top:2px;">${impDiff} <span style="color:var(--muted)">vs ${fmtNum(ad.avg_impressions)}</span></div>
+        </td>
+        <td class="num">
+          <div style="font-weight:600">${ad.today_frequency != null ? Number(ad.today_frequency).toFixed(2) : '—'}</div>
+          <div style="font-size:11px;margin-top:2px;">${freqDiff} <span style="color:var(--muted)">vs ${ad.avg_frequency != null ? Number(ad.avg_frequency).toFixed(2) : '—'}</span></div>
+        </td>
+        <td class="num">
+          <div style="font-weight:600">${fmtNum(ad.today_clicks)}</div>
+          <div style="font-size:11px;margin-top:2px;">${clickDiff} <span style="color:var(--muted)">vs ${fmtNum(ad.avg_clicks)}</span></div>
+        </td>
+        <td class="num">
+          <div style="font-weight:600">${ad.today_ctr != null ? Number(ad.today_ctr).toFixed(2) : 0}%</div>
+          <div style="font-size:11px;margin-top:2px;">${ctrDiff} <span style="color:var(--muted)">vs ${ad.avg_ctr != null ? Number(ad.avg_ctr).toFixed(2) : 0}%</span></div>
+        </td>
+        <td class="num">
+          <div style="font-weight:600">${fmtNum(ad.today_mess)}</div>
+          <div style="font-size:11px;margin-top:2px;">${messDiff} <span style="color:var(--muted)">vs ${fmtNum(ad.avg_mess)}</span></div>
+        </td>
+        <td class="num">
+          <div style="font-weight:600;color:${jColor}">${fmt(ad.today_cost_per_mess)}</div>
+          <div style="font-size:11px;margin-top:2px;">${cpmDiff} <span style="color:var(--muted)">vs ${fmtNum(ad.avg_cost_per_mess)}đ</span></div>
+        </td>
+        <td style="font-weight:600;color:${jColor}">${judgment}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function timeAgo(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString.replace(' ', 'T') + 'Z');
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'vừa xong';
+    if (diffMins < 60) return `${diffMins} phút trước`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} ngày trước`;
+  }
+
+  // ---- RENDER TABLE ----
+  function renderTable() {
+    const filterDecision = document.getElementById('filter-decision').value;
+    const filterService = document.getElementById('filter-service').value;
+    const searchText = document.getElementById('filter-search').value.toLowerCase();
+    const sortKey = document.getElementById('filter-sort').value;
+    const hidePaused = document.getElementById('filter-hide-paused').checked;
+
+    let rows = allAds.filter(ad => {
+      if (hidePaused && ad.effective_status === 'PAUSED') return false;
+      if (filterDecision && ad.decision !== filterDecision) return false;
+      if (filterService && ad.service !== filterService) return false;
+      if (searchText && !((ad.ad_name||'').toLowerCase().includes(searchText) || (ad.campaign_name||'').toLowerCase().includes(searchText))) return false;
+      return true;
+    });
+
+    rows.sort((a, b) => {
+      if (sortKey === 'cost_per_mess_asc') return (a.cost_per_mess ?? Infinity) - (b.cost_per_mess ?? Infinity);
+      if (sortKey === 'cost_per_mess_desc') return (b.cost_per_mess ?? -1) - (a.cost_per_mess ?? -1);
+      if (sortKey === 'spend_desc') return b.total_spend - a.total_spend;
+      if (sortKey === 'run_days_desc') return b.run_days - a.run_days;
+      return 0;
+    });
+
+    const tbody = document.getElementById('perf-tbody');
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="icon">🔍</div>Không có dữ liệu phù hợp</div></td></tr>`;
+      return;
+    }
+    let t_spend=0, t_spend_avg=0, t_imp=0, t_clicks=0, t_mess=0;
+    let t_freq_imp_sum=0; // for weighted freq
+
+    rows.forEach(ad => {
+      t_spend += (ad.total_spend || 0);
+      t_spend_avg += (ad.avg_spend_per_day || 0);
+      t_imp += (ad.total_impressions || 0);
+      t_clicks += (ad.total_clicks || 0);
+      t_mess += (ad.total_mess || 0);
+      if (ad.avg_frequency && ad.total_impressions) t_freq_imp_sum += (ad.avg_frequency * ad.total_impressions);
+    });
+
+    const cpm = t_imp > 0 ? (t_spend / t_imp * 1000) : 0;
+    const ctr = t_imp > 0 ? (t_clicks / t_imp * 100) : 0;
+    const cp_mess = t_mess > 0 ? (t_spend / t_mess) : (t_spend);
+    const avg_freq = t_imp > 0 ? (t_freq_imp_sum / t_imp) : 0;
+
+    const totalRow = `
+      <tr class="total-row" style="background:var(--surface2);font-weight:700;">
+        <td style="color:var(--accent2)">TỔNG HIỆN THỊ (${rows.length} Ads)</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">${fmt(t_spend)}</td>
+        <td class="num">${fmt(t_spend_avg)}</td>
+        <td class="num">${fmtNum(cpm)}₫</td>
+        <td class="num">${fmtNum(t_imp)}</td>
+        <td class="num">${avg_freq ? avg_freq.toFixed(2) : '—'}</td>
+        <td class="num">${fmtNum(t_clicks)}</td>
+        <td class="num">${ctr.toFixed(2)}%</td>
+        <td class="num">${fmtNum(t_mess)}</td>
+        <td class="num">${fmt(cp_mess)}</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>`;
+
+    tbody.innerHTML = totalRow + rows.map(ad => {
+      const badge = getBadge(ad.decision);
+      const actions = getActions(ad);
+      const cleanId = (ad.ad_id || '').replace(/^'/, '');
+      
+      let shortAdName = ad.ad_name || cleanId;
+      const match = shortAdName.match(/^([a-zA-Z0-9_-]+-id-\d+)/);
+      if (match) shortAdName = match[1];
+
+      const tgAttr = ad.targeting ? ad.targeting.replace(/"/g, '&quot;') : '';
+      const tgIcon = tgAttr ? `<span class="target-icon" data-target="${tgAttr}" onmouseenter="showTooltip(event)" onmouseleave="hideTooltip()">🎯</span>` : '';
+
+      const displayName = ad.post_url 
+        ? `<a href="${ad.post_url}" target="_blank" style="color:inherit; text-decoration:underline;" title="${ad.ad_name}">${shortAdName}</a>${tgIcon}`
+        : `<span title="${ad.ad_name}">${shortAdName}</span>${tgIcon}`;
+
+      const budgetVal = ad.adset_budget > 0 ? ad.adset_budget : (ad.campaign_budget || 0);
+      let budgetStr = budgetVal > 0 ? fmt(budgetVal) : '—';
+      if (budgetVal > 0 && ad.budget_trend) {
+        const agoStr = ad.budget_updated_at ? timeAgo(ad.budget_updated_at) : '';
+        if (ad.budget_trend === 'UP') {
+          budgetStr += ` <span style="color:#34d399;font-size:10px;">▲</span><div style="font-size:10px;color:#34d399;margin-top:2px;">đã scale (${agoStr})</div>`;
+        }
+        if (ad.budget_trend === 'DOWN') {
+          budgetStr += ` <span style="color:#f87171;font-size:10px;">▼</span><div style="font-size:10px;color:#f87171;margin-top:2px;">đã giảm (${agoStr})</div>`;
+        }
+      }
+
+      return `<tr style="opacity: ${ad.effective_status === 'PAUSED' ? '0.5' : '1'}; transition: opacity 0.2s;">
+        <td>
+          <div class="ad-name" style="margin-bottom: 6px; font-weight: 600;">${displayName}</div>
+          <div style="font-size: 11px; color: var(--muted); margin-bottom: 2px;"><span style="color:var(--text);opacity:0.7">Camp:</span> ${ad.campaign_name || '—'}</div>
+          <div style="font-size: 11px; color: var(--muted); margin-bottom: 2px;"><span style="color:var(--text);opacity:0.7">Nhóm:</span> ${ad.adset_name || '—'}</div>
+          <div style="font-size: 10px; color: var(--accent2); margin-top: 4px; font-family: monospace;">ID: ${cleanId}</div>
+        </td>
+        <td class="num">${ad.run_days}</td>
+        <td class="num">${budgetStr}</td>
+        <td class="num">${fmt(ad.total_spend)}</td>
+        <td class="num">${fmt(ad.avg_spend_per_day)}</td>
+        <td class="num">${fmtNum(ad.cpm)}₫</td>
+        <td class="num">${fmtNum(ad.total_impressions)}</td>
+        <td class="num">${ad.avg_frequency != null ? Number(ad.avg_frequency).toFixed(2) : '—'}</td>
+        <td class="num">${fmtNum(ad.total_clicks)}</td>
+        <td class="num">${ad.ctr_all != null ? Number(ad.ctr_all).toFixed(2) : 0}%</td>
+        <td class="num">${fmtNum(ad.total_mess)}</td>
+        <td class="num" style="font-weight:600;color:${ad.cost_per_mess > 250000 ? '#f87171' : ad.cost_per_mess ? '#34d399' : 'inherit'}">${fmt(ad.cost_per_mess)}</td>
+        <td>${badge}</td>
+        <td>${actions(cleanId, ad)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function getBadge(decision) {
+    if (decision === 'pause') return '<span class="badge badge-red">🚨 Cần Tắt</span>';
+    if (decision === 'testing') return '<span class="badge badge-yellow">🟡 Test</span>';
+    if (decision === 'scale') return '<span class="badge badge-green">🚀 Cần Scale</span>';
+    if (decision === 'scaled') return '<span class="badge badge-blue">✅ Đã Scale</span>';
+    if (decision === 'monitor') return '<span class="badge badge-blue">👀 Chờ</span>';
+    if (decision === 'paused') return '<span class="badge badge-gray">✅ Tắt</span>';
+    return '—';
+  }
+
+  function getActions(ad) {
+    return (cleanId, adData) => {
+      let btns = '';
+      if (adData.decision === 'pause') {
+        btns += `<button class="btn-action btn-pause" onclick="openPause('${cleanId}','${(adData.ad_name||'').replace(/'/g,"\\'")}')">⏸ Tắt</button> `;
+      }
+      if (adData.decision === 'scale') {
+        const budgetToScale = adData.adset_budget > 0 ? adData.adset_budget : (adData.campaign_budget || 0);
+        btns += `<button class="btn-action btn-scale" onclick="openScale('${cleanId}','${(adData.ad_name||'').replace(/'/g,"\\'")}','${budgetToScale}')">📈 +20%</button>`;
+      }
+      if (adData.decision === 'scaled') {
+        const budgetToScale = adData.adset_budget > 0 ? adData.adset_budget : (adData.campaign_budget || 0);
+        btns += `<button class="btn-action" style="background: rgba(245,158,11,0.15); color: #fbbf24;" onclick="openScale('${cleanId}','${(adData.ad_name||'').replace(/'/g,"\\'")}','${budgetToScale}')">⚠️ Ép Scale (+20%)</button>`;
+      }
+      if (adData.decision === 'monitor') {
+        btns += `<button class="btn-action btn-disabled" disabled>⏳ Chờ</button>`;
+      }
+      if (!btns) btns = `<button class="btn-action btn-disabled" disabled>—</button>`;
+      return btns;
+    };
+  }
+
+  // ---- RENDER CHART ----
+  function renderChart() {
+    const filterAd = document.getElementById('chart-ad-filter').value;
+    let data = filterAd ? dailyData.filter(d => d.ad_id === filterAd) : dailyData;
+
+    // Group by date
+    const dates = [...new Set(data.map(d => d.date))].sort();
+    const adIds = filterAd ? [filterAd] : [...new Set(data.map(d => d.ad_id))].slice(0, 10);
+    const colors = ['#818cf8','#34d399','#fbbf24','#f87171','#60a5fa','#a78bfa','#f472b6','#6ee7b7','#fcd34d','#fc8b8b'];
+
+    // CPM Chart
+    const cpmCtx = document.getElementById('cpm-chart').getContext('2d');
+    if (cpmChart) cpmChart.destroy();
+    cpmChart = new Chart(cpmCtx, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: 'Ngưỡng 250.000₫', data: dates.map(() => 250000), borderColor: '#ef4444', borderDash: [6,3], borderWidth: 2, pointRadius: 0, fill: false },
+          ...adIds.map((id, i) => {
+            const adName = data.find(d => d.ad_id === id)?.ad_name || id;
+            return {
+              label: adName.substring(0, 30),
+              data: dates.map(date => { const r = data.find(d => d.ad_id === id && d.date === date); return r?.cost_per_mess ?? null; }),
+              borderColor: colors[i % colors.length],
+              backgroundColor: colors[i % colors.length] + '20',
+              borderWidth: 2,
+              pointRadius: 4,
+              tension: 0.3,
+              spanGaps: false,
+            };
+          })
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#94a3b8', font: { size: 11 } }, position: 'bottom' },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.y).replace('₫','') }₫` } }
+        },
+        scales: {
+          x: { ticks: { color: '#64748b' }, grid: { color: '#1e2540' } },
+          y: { ticks: { color: '#64748b', callback: v => (v/1000)+'k₫' }, grid: { color: '#1e2540' } }
+        }
+      }
+    });
+
+    // Spend Chart
+    const spendCtx = document.getElementById('spend-chart').getContext('2d');
+    if (spendChart) spendChart.destroy();
+    const spendByDate = dates.map(date => data.filter(d => d.date === date).reduce((s, d) => s + (d.spend || 0), 0));
+    spendChart = new Chart(spendCtx, {
+      type: 'bar',
+      data: {
+        labels: dates,
+        datasets: [{
+          label: 'Tổng Spend',
+          data: spendByDate,
+          backgroundColor: '#6366f133',
+          borderColor: '#818cf8',
+          borderWidth: 2,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#64748b' }, grid: { color: '#1e2540' } },
+          y: { ticks: { color: '#64748b', callback: v => (v/1000)+'k₫' }, grid: { color: '#1e2540' } }
+        }
+      }
+    });
+  }
+
+  // ---- TABS ----
+  function switchTab(tab) {
+    const tabList = ['table','daily-report','chart','monthly','services','content'];
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', tabList[i] === tab));
+    document.querySelectorAll('.tab-content').forEach((c) => {
+      if (c.id === `tab-${tab}`) {
+        c.classList.add('active');
+      } else {
+        c.classList.remove('active');
+      }
+    });
+  }
+
+  async function triggerSync() {
+    const btn = document.getElementById('btn-sync');
+    const oldText = btn.textContent;
+    btn.textContent = '⏳ Đang đồng bộ...';
+    btn.disabled = true;
+
+    try {
+      await fetch('/api/ads/sync', { method: 'POST' });
+      // The backend syncs in the background, give it 5 seconds before reloading
+      setTimeout(async () => {
+        await loadAll();
+        btn.textContent = oldText;
+        btn.disabled = false;
+        alert('Đã cập nhật dữ liệu từ Facebook!');
+      }, 5000);
+    } catch (e) {
+      alert('Lỗi khởi tạo đồng bộ.');
+      btn.textContent = oldText;
+      btn.disabled = false;
+    }
+  }
+
+  // ---- MODAL ----
+  function openPause(adId, adName) {
+    pendingAction = { type: 'pause', adId };
+    document.getElementById('modal-title').textContent = '⏸ Tắt Quảng Cáo';
+    document.getElementById('modal-body').innerHTML = `Bạn xác nhận tắt Ad:<br><strong>${adName}</strong><br><br>Yêu cầu này sẽ gọi Facebook API để PAUSE quảng cáo ngay lập tức.`;
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.textContent = 'Xác nhận Tắt';
+    btn.className = 'btn-confirm red';
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function openScale(adId, adName, currentBudget) {
+    pendingAction = { type: 'scale', adId };
+    const newBudget = Math.round(parseInt(currentBudget || 0) * 1.2).toLocaleString('vi-VN');
+    document.getElementById('modal-title').textContent = '🚀 Scale Ngân Sách';
+    document.getElementById('modal-body').innerHTML = `Bạn xác nhận scale ngân sách Ad:<br><strong>${adName}</strong><br><br>Ngân sách Ad Set sẽ được tăng <strong>+20%</strong>. Yêu cầu sẽ được gửi đến Facebook API.`;
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.textContent = 'Xác nhận Scale +20%';
+    btn.className = 'btn-confirm green';
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+    pendingAction = null;
+  }
+
+  async function confirmAction() {
+    if (!pendingAction) return;
+    const { type, adId } = pendingAction;
+    closeModal();
+    try {
+      const r = await fetch(`/api/ads/${adId}/${type}`, { method: 'POST' }).then(x => x.json());
+      if (r.success) {
+        showToast('✅ ' + r.message, 'success');
+        setTimeout(loadAll, 1000);
+      } else {
+        showToast('❌ ' + r.error, 'error');
+      }
+    } catch (e) {
+      showToast('❌ Lỗi kết nối: ' + e.message, 'error');
+    }
+  }
+
+  // ---- WALLET MODAL ----
+  function openWalletModal() {
+    document.getElementById('wallet-amount').value = '';
+    document.getElementById('wallet-modal').classList.add('open');
+  }
+
+  function closeWalletModal() {
+    document.getElementById('wallet-modal').classList.remove('open');
+  }
+
+  async function confirmWallet(overwrite) {
+    const amountVal = document.getElementById('wallet-amount').value;
+    if (!amountVal) return showToast('❌ Vui lòng nhập số tiền', 'error');
+    
+    const amount = parseInt(amountVal);
+    closeWalletModal();
+    try {
+      const r = await fetch(`/api/ads/wallet/deposit`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, overwrite })
+      }).then(x => x.json());
+      
+      if (r.success) {
+        showToast('✅ ' + r.message, 'success');
+        loadWallet();
+      } else {
+        showToast('❌ ' + r.error, 'error');
+      }
+    } catch (e) {
+      showToast('❌ Lỗi kết nối: ' + e.message, 'error');
+    }
+  }
+
+  // ---- TOAST ----
+  function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.className = 'toast', 3500);
+  }
+
+  // Close modal on overlay click
+  document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+  document.getElementById('wallet-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeWalletModal(); });
+
+  // Close AI modal on overlay click
+  document.getElementById('ai-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAiModal(); });
+
+  function closeAiModal() {
+    document.getElementById('ai-modal').classList.remove('open');
+  }
+
+  async function analyzeContent(index) {
+    const d = contentData[index];
+    if (!d || !d.ad_ids) return;
+
+    // Grab the first ad_id to represent the whole content piece
+    const adId = d.ad_ids.split(',')[0];
+    
+    // Prepare stats for AI
+    const stats = {
+      active_ads: d.active_ads,
+      total_ads: d.total_ads,
+      total_spend: d.total_spend,
+      total_impressions: d.total_impressions,
+      cpm: d.cpm,
+      total_clicks: d.total_clicks,
+      ctr_all: d.ctr_all,
+      total_mess: d.total_mess,
+      cost_per_mess: d.cost_per_mess,
+      sample_ad_name: d.sample_ad_name,
+      targeting: d.targeting
+    };
+
+    document.getElementById('ai-modal-title').textContent = `🤖 Phân tích: ${d.sample_ad_name}`;
+    document.getElementById('ai-modal-body').innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">Đang thu thập dữ liệu Creative và suy nghĩ... Quá trình này có thể mất 10-15s⏳</div>';
+    document.getElementById('ai-modal').classList.add('open');
+
+    try {
+      const res = await fetch('/api/ads/content/analyze', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ adId, stats })
+      }).then(x => x.json());
+
+      if (res.success) {
+        // use marked
+        document.getElementById('ai-modal-body').innerHTML = window.marked ? marked.parse(res.analysis) : `<pre style="white-space:pre-wrap">${res.analysis}</pre>`;
+      } else {
+        document.getElementById('ai-modal-body').innerHTML = `<div style="color:var(--red)">Lỗi: ${res.error}</div>`;
+      }
+    } catch(e) {
+      document.getElementById('ai-modal-body').innerHTML = `<div style="color:var(--red)">Lỗi kết nối: ${e.message}</div>`;
+    }
+  }
+
+  function showAiStrategy() {
+    window.location.href = '/ai-strategy.html';
+  }
+
+  // Init
+  loadAll();
+  // --- Universal Table Sort ---
+  document.addEventListener('click', function(e) {
+    const th = e.target.closest('th.sortable');
+    if (!th) return;
+    
+    const table = th.closest('table');
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    if (rows.length <= 1) return;
+    
+    const isNum = th.classList.contains('num');
+    const thIndex = Array.from(th.parentNode.children).indexOf(th);
+    
+    let asc = th.getAttribute('data-order') === 'asc';
+    th.setAttribute('data-order', asc ? 'desc' : 'asc');
+    
+    // Reset others
+    Array.from(th.parentNode.children).forEach(h => {
+      if (h !== th) h.removeAttribute('data-order');
+    });
+    
+    // Total row usually has a distinct style or is the first element
+    let totalRow = null;
+    let dataRows = rows;
+    if (rows[0].innerText.includes('TỔNG')) {
+      totalRow = rows[0];
+      dataRows = rows.slice(1);
+    }
+    
+    dataRows.sort((a, b) => {
+       let cellA = a.children[thIndex];
+       let cellB = b.children[thIndex];
+       
+       let valA = cellA.getAttribute('data-val');
+       let valB = cellB.getAttribute('data-val');
+       
+       // Fallback to text if data-val is missing
+       if (valA == null) valA = cellA.innerText.split('\n')[0].replace(/[₫%]/g, '').trim();
+       if (valB == null) valB = cellB.innerText.split('\n')[0].replace(/[₫%]/g, '').trim();
+       
+       if (isNum) {
+          // Xóa tất cả trừ số, phẩy, chấm, và dấu trừ
+          valA = valA.replace(/[^\d,\.-]/g, '');
+          valB = valB.replace(/[^\d,\.-]/g, '');
+          // Đối với định dạng Việt Nam, dấu chấm . là phân cách ngàn, dấu phẩy , là thập phân
+          let numA = parseFloat(valA.replace(/\./g, '').replace(/,/g, '.')) || 0;
+          let numB = parseFloat(valB.replace(/\./g, '').replace(/,/g, '.')) || 0;
+          return asc ? numA - numB : numB - numA;
+       }
+       return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+    
+    tbody.innerHTML = '';
+    if (totalRow) tbody.appendChild(totalRow);
+    dataRows.forEach(tr => tbody.appendChild(tr));
+  });
+
+</script>
+</body>
+</html>
+
+<div class="modal-overlay" id="export-modal" style="display: none;">
+  <div class="modal">
+    <h3>📥 Trích xuất toàn bộ Link Post (Excel)</h3>
+    <p>Chọn nguồn dữ liệu bạn muốn tải về máy. Quá trình này sẽ diễn ra ngầm.</p>
+    
+    <div style="margin: 16px 0;">
+      <select id="export-type" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+        <option value="page">Lấy tất cả Link Bài đăng trên Fanpage (Page Posts)</option>
+        <option value="ads">Lấy tất cả Link Bài Quảng Cáo (Dark Posts từ BM)</option>
+      </select>
+    </div>
+
+    <div id="export-progress-area" style="display:none; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+      <div style="font-size: 13px; color: var(--accent); font-weight: 600; margin-bottom: 6px;" id="export-status-text">Đang khởi tạo...</div>
+    </div>
+
+    <div id="export-download-area" style="display:none; text-align: center; padding: 12px; margin-bottom: 16px;">
+      <a id="export-download-btn" href="#" class="btn-confirm green" style="text-decoration:none; display:inline-block; padding: 10px 20px;">⬇️ Click để tải File Excel</a>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeExportModal()">Đóng</button>
+      <button class="btn-confirm" id="export-start-btn" onclick="startExport()">🚀 Bắt đầu Quét</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let exportJobPoller = null;
+
+  function openExportModal() {
+    document.getElementById('export-modal').style.display = 'flex';
+    resetExportUI();
+  }
+
+  function closeExportModal() {
+    document.getElementById('export-modal').style.display = 'none';
+    if(exportJobPoller) clearInterval(exportJobPoller);
+  }
+
+  function resetExportUI() {
+    document.getElementById('export-progress-area').style.display = 'none';
+    document.getElementById('export-download-area').style.display = 'none';
+    document.getElementById('export-start-btn').style.display = 'block';
+    document.getElementById('export-type').disabled = false;
+  }
+
+  async function startExport() {
+    const type = document.getElementById('export-type').value;
+    
+    document.getElementById('export-start-btn').style.display = 'none';
+    document.getElementById('export-type').disabled = true;
+    document.getElementById('export-progress-area').style.display = 'block';
+    document.getElementById('export-status-text').innerText = 'Đang gọi Api FB...';
+
+    try {
+      const res = await fetch('/api/facebook/export/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      });
+      const data = await res.json();
+      
+      if(data.success) {
+        exportJobPoller = setInterval(() => checkExportStatus(data.jobId), 1500);
+      } else {
+        alert("Lỗi: " + data.error);
+        resetExportUI();
+      }
+    } catch(err) {
+      alert("Lỗi kết nối");
+      resetExportUI();
+    }
+  }
+
+  async function checkExportStatus(jobId) {
+      const res = await fetch(`/api/facebook/export/status?job_id=${jobId}`);
+      const data = await res.json();
+      
+      if(data.success) {
+        document.getElementById('export-status-text').innerText = data.progress;
+        
+        if (data.status === 'completed') {
+          clearInterval(exportJobPoller);
+          document.getElementById('export-download-area').style.display = 'block';
+          document.getElementById('export-download-btn').href = data.fileUrl;
+        } else if (data.status === 'error') {
+          clearInterval(exportJobPoller);
+          alert("Lỗi tải: " + data.error);
+          resetExportUI();
+        }
+      }
+  }
+</script>

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Aeslatek Content Creator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0d17;
+      --surface: rgba(17, 20, 39, 0.85);
+      --border: rgba(255, 255, 255, 0.06);
+      --border-focus: rgba(99, 102, 241, 0.5);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+    }
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text); margin: 0; min-height: 100vh; overflow-y:scroll;}
+    
+    body::before {
+      content: ''; position: fixed; top: -200px; right: -200px; width: 600px; height: 600px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%); pointer-events: none; z-index: -1;
+    }
+
+    /* HEADER (Shared) */
+    .header {
+      position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; background: rgba(11, 13, 23, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-logo { display: flex; filter: drop-shadow(0 0 8px var(--accent-glow)); }
+    .header-title { font-size: 1.2rem; font-weight: 700; margin: 0; background: linear-gradient(135deg, var(--accent), #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .global-nav { display: flex; gap: 24px; font-weight: 600; font-size: 14px; position: absolute; left: 50%; transform: translateX(-50%); }
+    .global-nav a { text-decoration: none; transition: 0.2s; }
+    .nav-inactive { color: var(--muted); }
+    .nav-active { color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 4px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    /* LAYOUT */
+    .main { display: flex; gap: 24px; padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; backdrop-filter: blur(12px); }
+    .col-input { flex: 1; display:flex; flex-direction:column; gap:20px; }
+    .col-output { flex: 1; display:flex; flex-direction:column; gap:20px; }
+
+    .panel-title { font-size: 1.1rem; font-weight: 600; color: var(--accent); margin:0 0 16px 0; display:flex; align-items:center; gap:8px;}
+
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 8px; text-transform:uppercase; letter-spacing:0.05em;}
+    textarea { 
+      width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); 
+      color: var(--text); padding: 12px; border-radius: 8px; font-size: 0.9rem; 
+      transition: all 0.2s; resize: vertical; line-height: 1.6;
+    }
+    textarea:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow); }
+    
+    .btn { 
+      background: linear-gradient(135deg, var(--accent), #a855f7); color: #fff; border: none; 
+      padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; 
+      display:flex; justify-content:center; align-items:center; gap:8px; font-size:15px;
+    }
+    .btn:hover { box-shadow: 0 0 20px var(--accent-glow); transform:translateY(-1px); }
+
+    .brief-output {
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text); 
+      padding: 20px; border-radius: 8px; font-size: 0.95rem; line-height: 1.6; 
+      min-height: 150px; overflow-y: auto; max-height: 500px;
+    }
+    .brief-output h3 { font-size: 1.1rem; color: var(--accent); margin-top: 0; margin-bottom: 12px; }
+    .brief-output h4 { font-size: 1rem; color: #fff; margin-bottom: 8px; }
+    .brief-output strong { color: #fff; }
+    .brief-output ul { padding-left: 20px; margin-top: 0; }
+    .brief-output table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
+    .brief-output th, .brief-output td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+    
+    .btn-copy {
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted); 
+      border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; transition: 0.2s; font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-copy:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-glow); }
+
+    /* Overlay */
+    #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter:blur(4px); z-index: 999; justify-content: center; align-items: center; flex-direction: column; color: var(--text); font-weight: 600; }
+    .spinner { border: 4px solid var(--border); border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom:16px;}
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo">
+        <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+              <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
+          <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1 class="header-title">Aeslatek Hub</h1>
+    </div>
+
+    <!-- GLOBAL NAV -->
+    <nav class="global-nav">
+      <a href="/" class="nav-inactive">Content Distributor</a>
+      <a href="/content-hub" class="nav-active">Content Creator</a>
+      <a href="/ads-dashboard" class="nav-inactive">Ads Dashboard</a>
+    </nav>
+    <div class="header-right"></div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main">
+    
+    <!-- LEFT: INPUTS -->
+    <div class="col-input">
+      
+      <!-- COLLAPSIBLE KB PANEL -->
+      <div class="panel" style="padding: 16px 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleKB()">
+          <h2 class="panel-title" style="margin:0;">📚 Dữ liệu Cơ sở (Knowledge Base)</h2>
+          <span id="kb-indicator" style="color:var(--accent); font-weight:600; font-size:13px; background:var(--accent-glow); padding: 4px 8px; border-radius: 4px;">🔽 Thiết lập</span>
+        </div>
+        
+        <div id="kb-body" style="display:none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+          <div style="margin-bottom: 12px;">
+            <label>🏥 1. Phòng khám Aeslatek</label>
+            <textarea id="kb-clinic" rows="3" placeholder="Uy tín, lịch sử, ưu điểm cốt lõi..."></textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label>👨‍⚕️ 2. Bác sĩ</label>
+            <textarea id="kb-doctor" rows="3" placeholder="Chứng chỉ, chuyên môn, kinh nghiệm bác sĩ..."></textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label>🔬 3. Dịch vụ</label>
+            <textarea id="kb-service" rows="3" placeholder="Các dịch vụ chính, quy trình, ưu đãi..."></textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label>⚙️ 4. Thiết bị & Công nghệ</label>
+            <textarea id="kb-tech" rows="3" placeholder="Tên máy móc, công nghệ chuyển giao, máy Pico..."></textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label>⚠️ 5. Quy tắc nội dung</label>
+            <textarea id="kb-rules" rows="3" placeholder="Các từ cấm, cam kết y khoa tuyệt đối, phong cách văn bản..."></textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label>🎨 6. Quy tắc Thiết kế</label>
+            <textarea id="kb-design" rows="3" placeholder="Font chữ, màu sắc thương hiệu, bố cục ảnh..."></textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label>🎬 7. Quy tắc Video</label>
+            <textarea id="kb-video" rows="3" placeholder="Phong cách âm nhạc, góc quay, nhịp cắt, hiệu ứng..."></textarea>
+          </div>
+          <button class="btn-copy" style="margin-top:16px; background:var(--surface); color:var(--text);" onclick="saveKB()">💾 Lưu cấu hình & Thu gọn</button>
+        </div>
+      </div>
+
+      <!-- CONTENT ORDER PANEL -->
+      <div class="panel">
+        <h2 class="panel-title" style="margin-bottom:20px;">🎯 Đặt hàng Content (Order)</h2>
+        
+        <div style="margin-bottom: 20px;">
+          <label>💡 Chủ đề / Thông điệp chính</label>
+          <textarea id="order-topic" rows="3" placeholder="Ví dụ: Giới thiệu ưu đãi giảm giá 50% suất trị nám tháng 10, tập trung vào mẹ bỉm sau sinh..."></textarea>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label>📺 Định dạng Content</label>
+          <select id="order-format" style="width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:8px; font-size:0.9rem; outline:none; font-family:'Inter', sans-serif;">
+            <option value="1_image">1 Ảnh (Single Image)</option>
+            <option value="album">Album Ảnh (Carousel/Nhiều ảnh)</option>
+            <option value="video_reels">Video Ngắn (Reels/TikTok)</option>
+            <option value="video_long">Video Dài (YouTube/Facebook Video dạng dọc ngang)</option>
+            <option value="pr_article">Bài Báo PR / Định dạng chỉ Text dài</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label>⏱️ Thời lượng Video (Chỉ dùng khi làm Video)</label>
+          <select id="order-duration" style="width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:8px; font-size:0.9rem; outline:none; font-family:'Inter', sans-serif;">
+            <option value="15 giây">Từ 10 - 15 giây (Rất ngắn, thu hút gấp)</option>
+            <option value="30 giây">Khoảng 30 giây (Ngắn, nhịp điệu nhanh)</option>
+            <option value="60 giây">Khoảng 60 giây (Tiêu chuẩn TikTok, Reels)</option>
+            <option value="3 phút">Trên 1 phút (Review sâu, Video bác sĩ)</option>
+          </select>
+        </div>
+
+        <div>
+           <div style="display:flex; justify-content:space-between;">
+             <label>📐 Cấu trúc Bài viết (Template)</label>
+           </div>
+          <textarea id="tpl-input" rows="4" placeholder="- Hook: Đánh vào nỗi đau rát da...&#10;- Body: Giải pháp Pico...&#10;- CTA: Chỉ 1tr9/buổi..."></textarea>
+        </div>
+      </div>
+
+      <button class="btn" style="padding:16px; font-size:16px;" onclick="generate()">✨ Tự Động Sinh Content Đa Kênh</button>
+    </div>
+
+    <!-- RIGHT: OUTPUTS -->
+    <div class="col-output">
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+          <h2 class="panel-title" style="margin:0;">📝 Facebook Post</h2>
+          <button class="btn-copy" onclick="copyText('out-fb')">📋 Copy Post</button>
+        </div>
+        <textarea id="out-fb" rows="12" placeholder="Bài đăng Facebook hoàn chỉnh sẽ hiện ở đây..."></textarea>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+          <h2 class="panel-title" style="margin:0;">🎨 Design Brief (Yêu cầu thiết kế)</h2>
+          <button class="btn-copy" onclick="copyText('raw-design')">📋 Copy Brief</button>
+        </div>
+        <div id="out-design" class="brief-output">
+          <span style="color:var(--muted); font-style:italic;">Bố cục, thông điệp trên ảnh cho Designer sẽ được render tại đây...</span>
+        </div>
+        <textarea id="raw-design" style="display:none;"></textarea>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+          <h2 class="panel-title" style="margin:0;">🎬 Video Script (Kịch bản Video)</h2>
+          <button class="btn-copy" onclick="copyText('raw-video')">📋 Copy Script</button>
+        </div>
+        <div id="out-video" class="brief-output">
+          <span style="color:var(--muted); font-style:italic;">Kịch bản quay / hiệu ứng cho Editor sẽ được render tại đây...</span>
+        </div>
+        <textarea id="raw-video" style="display:none;"></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div>Hệ thống Đa Đặc Vụ đang xử lý:<br/><span id="agent-status" style="color:var(--accent);font-size:14px;margin-top:8px;display:inline-block;">Đang phân tích dàn ý...</span></div>
+  </div>
+
+  <script>
+
+    // Load saved KB data on boot
+    window.onload = async () => {
+       try {
+         const res = await fetch('/api/content/kb-settings');
+         const d = await res.json();
+         if (d.success) {
+           const savedClinic = d.kb_clinic || '';
+           const savedDoctor = d.kb_doctor || '';
+           const savedService = d.kb_service || '';
+           const savedTech = d.kb_tech || '';
+           const savedRules = d.kb_rules || '';
+           const savedDesign = d.kb_design || '';
+           const savedVideo = d.kb_video || '';
+           const savedTpl = d.kb_tpl || '';
+           
+           if (savedClinic || savedService || savedDoctor || savedTech || savedRules || savedDesign || savedVideo) {
+              document.getElementById('kb-clinic').value = savedClinic;
+              document.getElementById('kb-doctor').value = savedDoctor;
+              document.getElementById('kb-service').value = savedService;
+              document.getElementById('kb-tech').value = savedTech;
+              document.getElementById('kb-rules').value = savedRules;
+              document.getElementById('kb-design').value = savedDesign;
+              document.getElementById('kb-video').value = savedVideo;
+              document.getElementById('kb-indicator').innerText = '✅ Đã tải cấu hình (Shared)';
+           } else {
+              toggleKB(); // Open by default if empty
+           }
+           if (savedTpl) {
+              document.getElementById('tpl-input').value = savedTpl;
+           }
+         }
+       } catch (e) {
+         console.error('Không thể lấy cấu hình KB:', e);
+         toggleKB();
+       }
+    };
+
+    function toggleKB() {
+       const b = document.getElementById('kb-body');
+       const ind = document.getElementById('kb-indicator');
+       if (b.style.display === 'none') {
+           b.style.display = 'block';
+           ind.innerText = '🔼 Đóng lại';
+       } else {
+           b.style.display = 'none';
+           ind.innerText = '🔽 Mở rộng';
+       }
+    }
+
+    async function saveKB() {
+        const payload = {
+           kb_clinic: document.getElementById('kb-clinic').value,
+           kb_doctor: document.getElementById('kb-doctor').value,
+           kb_service: document.getElementById('kb-service').value,
+           kb_tech: document.getElementById('kb-tech').value,
+           kb_rules: document.getElementById('kb-rules').value,
+           kb_design: document.getElementById('kb-design').value,
+           kb_video: document.getElementById('kb-video').value,
+           kb_tpl: document.getElementById('tpl-input').value
+        };
+        try {
+           await fetch('/api/content/kb-settings', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(payload)
+           });
+           document.getElementById('kb-indicator').innerText = '✅ Đã lưu cấu hình (Shared)';
+        } catch(e) {
+           document.getElementById('kb-indicator').innerText = '❌ Lỗi lưu cấu hình';
+        }
+        toggleKB();
+    }
+
+    async function generate() {
+      const kbClinic = document.getElementById('kb-clinic').value;
+      const kbDoctor = document.getElementById('kb-doctor').value;
+      const kbService = document.getElementById('kb-service').value;
+      const kbTech = document.getElementById('kb-tech').value;
+      const kbRules = document.getElementById('kb-rules').value;
+      const kbDesign = document.getElementById('kb-design').value;
+      const kbVideo = document.getElementById('kb-video').value;
+      const tplText = document.getElementById('tpl-input').value;
+      
+      const orderTopic = document.getElementById('order-topic').value;
+      const orderFormat = document.getElementById('order-format').value;
+      const orderDuration = document.getElementById('order-duration').value;
+      
+      const formatLabels = {
+        '1_image': '1 Ảnh tĩnh (Facebook Photo)',
+        'album': 'Album nhiều ảnh (Carousel)',
+        'video_reels': 'Video Ngắn / Reels / TikTok',
+        'video_long': 'Video Dài (YouTube / Facebook Video)',
+        'pr_article': 'Bài Báo PR / Bài viết chuyên gia'
+      };
+      const formatStr = formatLabels[orderFormat];
+
+      if(!kbClinic || !kbService || !tplText || !orderTopic) {
+        return alert("Vui lòng nhập đủ Thông tin Cơ sở, Chủ đề bài viết và Cấu trúc Template!");
+      }
+
+      document.getElementById('loading-overlay').style.display = 'flex';
+      
+      try {
+        const res = await fetch('/api/content/generate-direct', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ 
+             kb_clinic: kbClinic, 
+             kb_doctor: kbDoctor,
+             kb_service: kbService, 
+             kb_tech: kbTech,
+             kb_rules: kbRules,
+             kb_design: kbDesign,
+             kb_video: kbVideo,
+             template_structure: tplText,
+             topic: orderTopic,
+             format_type: formatStr,
+             video_duration: orderDuration
+          })
+        });
+        const d = await res.json();
+        
+        if(d.success) {
+          document.getElementById('out-fb').value = d.fb_post;
+          
+          document.getElementById('raw-design').value = d.design_brief;
+          document.getElementById('out-design').innerHTML = marked.parse(d.design_brief);
+
+          document.getElementById('raw-video').value = d.video_brief;
+          document.getElementById('out-video').innerHTML = marked.parse(d.video_brief);
+        } else {
+          alert('Lỗi khởi tạo AI: ' + d.error);
+        }
+      } catch(e) {
+        alert("Lỗi kết nối Server");
+      }
+      
+      document.getElementById('loading-overlay').style.display = 'none';
+      document.getElementById('agent-status').innerText = 'Đang phân tích dàn ý...';
+    }
+
+    function copyText(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el || !el.value) return;
+      
+      const copyFallback = () => {
+        const temp = document.createElement("textarea");
+        temp.value = el.value;
+        document.body.appendChild(temp);
+        temp.select();
+        try {
+          document.execCommand("copy");
+          alert('Đã copy thành công!');
+        } catch (err) {
+          alert('Trình duyệt không hỗ trợ copy tự động.');
+        }
+        document.body.removeChild(temp);
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(el.value)
+          .then(() => alert('Đã copy thành công!'))
+          .catch(() => copyFallback());
+      } else {
+        copyFallback();
+      }
+    }
+  </script>
+</body>
+</html>
